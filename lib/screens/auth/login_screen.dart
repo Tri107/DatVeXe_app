@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../services/Auth_Services.dart';
-
+import '../khachhang/home_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,19 +29,26 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _onLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
     try {
-      final user = await AuthService.login(_sdtCtrl.text.trim(), _passCtrl.text);
+      final user =
+      await AuthService.login(_sdtCtrl.text.trim(), _passCtrl.text.trim());
       if (user == null) {
         setState(() => _error = 'Sai SĐT hoặc mật khẩu');
         return;
       }
       if (!mounted) return;
       setState(() => _user = user);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Đăng nhập thành công: ${user.sdt} (${user.role})')),
       );
-      // Điều hướng demo
+
+      // ✅ Điều hướng demo
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
@@ -50,6 +58,13 @@ class _LoginScreenState extends State<LoginScreen> {
     } finally {
       setState(() => _loading = false);
     }
+  }
+
+  void _goToRegister() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
   }
 
   @override
@@ -89,10 +104,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: _loading ? null : _onLogin,
                     child: _loading
                         ? const SizedBox(
-                      height: 20, width: 20,
+                      height: 20,
+                      width: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                         : const Text('Đăng nhập'),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextButton(
+                    onPressed: _goToRegister,
+                    child: const Text(
+                      'Chưa có tài khoản? Tạo tài khoản mới',
+                      style: TextStyle(fontSize: 15),
+                    ),
                   ),
                   if (_user != null) ...[
                     const SizedBox(height: 16),
@@ -108,36 +133,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  final TaiKhoan user;
-  const HomeScreen({super.key, required this.user});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Trang chính'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () async {
-              await AuthService.logout();
-              if (!context.mounted) return;
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-          ),
-        ],
-      ),
-      body: Center(
-        child: Text('Đã đăng nhập: ${user.sdt} (${user.role})'),
       ),
     );
   }
