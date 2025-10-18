@@ -1,13 +1,12 @@
-import 'dart:convert';
-import 'package:dio/dio.dart';
+
 import '../config/api.dart';
-import '../models/chuyen.dart';
-import '../models/tuyenduong.dart';
-import '../models/benxe.dart';
-import '../models/xe.dart';
-import '../models/loaixe.dart';
+import '../models/Chuyen.dart';
+import '../models/TuyenDuong.dart';
+import '../models/BenXe.dart';
+import '../models/Xe.dart';
+import '../models/LoaiXe.dart';
 import '../models/khachhang.dart';
-import '../models/ve.dart';
+import '../models/Ve.dart';
 import '../models/trip_info.dart';
 
 class BookingService {
@@ -58,11 +57,11 @@ class BookingService {
 
     return TripInfoDTO(
       nhaXe: 'Chuyến ${ch.chuyenName}',
-      loaiXe: lx.name,
+      loaiXe: lx.loaiXeName,
       bienSo: xe.bienSo,
-      gioDi: ch.ngayGio,
-      benDi: benDi.name,
-      benDen: benDen.name,
+      gioDi: ch.ngayGio.toString(),
+      benDi: benDi.benXeName,
+      benDen: benDen.benXeName,
       giaVe: ve.veGia,
       khName: kh.khachHangName,
       khSdt: kh.sdt,
