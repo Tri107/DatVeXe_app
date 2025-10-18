@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import '../../services/booking_service.dart';
-import '../../models/ve.dart';
-import '../../models/khachhang.dart';
+import '../../config/api.dart';
+import '../../models/trip_info.dart';
 
 class PaymentScreen extends StatefulWidget {
-  final int veId; // ví dụ: 1
+  final int veId;
   const PaymentScreen({super.key, required this.veId});
 
   @override
@@ -12,18 +11,30 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final _svc = BookingService();
+  // summary cache
+  late Future<TripInfoDTO> _futureSummary;
+  num _basePrice = 0;
+  num _total = 0;
 
-  // ----- UI state -----
+  // UI state
   final _couponCtrl = TextEditingController();
   String? _appliedCoupon;
-  double _discountRate = 0.0; // 0 → không giảm, 0.1 → giảm 10%
-  int _method = 0;            // 0: QR, 1: Thẻ
+  bool _insurance = false;
+  int _method = 0; // 0: QR, 1: Card
   bool _agree = true;
 
-  // ✅ Bảo hiểm tai nạn
-  bool _insurance = false;
-  static const num _insuranceFee = 10000; // 10.000đ
+  @override
+  void initState() {
+    super.initState();
+    _futureSummary = _loadSummary();
+    _futureSummary.then((s) {
+      if (!mounted) return;
+      setState(() {
+        _basePrice = s.price;
+        _total = s.price;
+      });
+    });
+  }
 
   @override
   void dispose() {
@@ -31,59 +42,47 @@ class _PaymentScreenState extends State<PaymentScreen> {
     super.dispose();
   }
 
-  String _formatVND(num n) {
-    final s = n.toStringAsFixed(0);
-    final re = RegExp(r'\B(?=(\d{3})+(?!\d))');
-    return s.replaceAllMapped(re, (m) => '.') + ' đ';
+  Future<TripInfoDTO> _loadSummary() async {
+    final r = await Api.get('/booking/${widget.veId}/summary');
+    return TripInfoDTO.fromSummary(r.data);
   }
 
-  void _applyCoupon(num basePrice) {
-    final code = _couponCtrl.text.trim().toUpperCase();
-    double rate = 0.0;
-    if (code == 'GIAM10') rate = 0.10;
-    if (code == 'SALE20') rate = 0.20;
-
-    setState(() {
-      if (rate > 0) {
-        _discountRate = rate;
-        _appliedCoupon = code;
-      } else {
-        _discountRate = 0;
-        _appliedCoupon = null;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mã không hợp lệ')),
-        );
-      }
+  Future<void> _recalcTotal() async {
+    final r = await Api.post('/booking/${widget.veId}/quote', {
+      'coupon': _appliedCoupon,
+      'insurance': _insurance,
     });
+    setState(() => _total = (r.data['total'] as num?) ?? _basePrice);
   }
+
+  Future<void> _checkout() async {
+    final r = await Api.post('/booking/${widget.veId}/checkout', {
+      'coupon': _appliedCoupon,
+      'insurance': _insurance,
+      'method': _method == 0 ? 'qr' : 'card',
+    });
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${r.data['message'] ?? 'Thanh toán thành công'}')),
+    );
+  }
+
+  String _vnd(num n) =>
+      n.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.') + ' đ';
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Thanh toán')),
       backgroundColor: const Color(0xFFF8F8F8),
-      body: FutureBuilder<({Ve ve, KhachHang kh})>(
-        future: () async {
-          final ve = await _svc.getVeById(widget.veId);
-          final kh = await _svc.getKhachHang(ve.khachHangId);
-          return (ve: ve, kh: kh);
-        }(),
+      body: FutureBuilder<TripInfoDTO>(
+        future: _futureSummary,
         builder: (ctx, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
           }
-          if (snap.hasError) {
-            return Center(child: Text('Lỗi: ${snap.error}'));
-          }
-
-          final ve = snap.data!.ve;
-          final kh = snap.data!.kh;
-          final basePrice = (ve.veGia is num)
-              ? (ve.veGia as num)
-              : num.tryParse(ve.veGia.toString()) ?? 0;
-          final discount = basePrice * _discountRate;
-          final subTotal = basePrice - discount;
-          final total = subTotal + (_insurance ? _insuranceFee : 0);
+          if (snap.hasError) return Center(child: Text('Lỗi: ${snap.error}'));
+          final s = snap.data!;
 
           return Column(
             children: [
@@ -91,75 +90,60 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Thông tin vé/khách
                     _card(
                       child: Column(
                         children: [
-                          _row('Mã vé', '#${ve.veId}'),
+                          _row('Mã vé', '#${s.ticketId}'),
                           const Divider(height: 20),
-                          _row('Khách hàng', kh.khachHangName),
+                          _row('Khách hàng', s.khName),
                           const SizedBox(height: 6),
-                          _row('Số điện thoại', kh.sdt),
+                          _row('Số điện thoại', s.khSdt),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Mã giảm giá
                     _card(
                       title: 'Mã giảm giá',
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _couponCtrl,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Nhập mã (GIAM10, SALE20)',
-                                    isDense: true,
-                                    border: OutlineInputBorder(),
-                                  ),
-                                ),
+                          Expanded(
+                            child: TextField(
+                              controller: _couponCtrl,
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                hintText: 'Nhập mã (GIAM10, SALE20)',
+                                border: OutlineInputBorder(),
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton(
-                                onPressed: () => _applyCoupon(basePrice),
-                                child: const Text('Áp dụng'),
-                              )
-                            ],
-                          ),
-                          if (_appliedCoupon != null) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              'Đã áp dụng mã: $_appliedCoupon (-${(_discountRate * 100).toStringAsFixed(0)}%)',
-                              style: const TextStyle(color: Colors.green),
                             ),
-                          ]
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: () async {
+                              final code = _couponCtrl.text.trim().toUpperCase();
+                              setState(() => _appliedCoupon = code.isEmpty ? null : code);
+                              await _recalcTotal();
+                            },
+                            child: const Text('Áp dụng'),
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // ✅ Tiện ích bổ sung: Bảo hiểm tai nạn
                     _card(
                       title: 'Tiện ích bổ sung',
                       child: CheckboxListTile(
                         value: _insurance,
-                        onChanged: (v) => setState(() => _insurance = v ?? false),
+                        onChanged: (v) async {
+                          setState(() => _insurance = v ?? false);
+                          await _recalcTotal();
+                        },
                         title: const Text('Bảo hiểm tai nạn'),
-                        subtitle: Text(
-                          'Hỗ trợ rủi ro khi di chuyển. Phí: ${_formatVND(_insuranceFee)}',
-                          style: const TextStyle(color: Colors.black54),
-                        ),
+                        subtitle: const Text('Phí: 10.000 đ'),
                         controlAffinity: ListTileControlAffinity.leading,
                         dense: true,
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Phương thức thanh toán
                     _card(
                       title: 'Phương thức thanh toán',
                       child: Column(
@@ -168,8 +152,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             value: 0,
                             groupValue: _method,
                             onChanged: (v) => setState(() => _method = v ?? 0),
-                            title: const Text(
-                                'Chuyển khoản bằng mã QR (Momo, ViettelPay, ... )'),
+                            title: const Text('Chuyển khoản mã QR'),
                             secondary: const Icon(Icons.qr_code_2),
                             dense: true,
                           ),
@@ -177,7 +160,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             value: 1,
                             groupValue: _method,
                             onChanged: (v) => setState(() => _method = v ?? 1),
-                            title: const Text('Thẻ ngân hàng (Visa/Master/JCB)'),
+                            title: const Text('Thẻ ngân hàng (Visa/Master)'),
                             secondary: const Icon(Icons.credit_card),
                             dense: true,
                           ),
@@ -185,124 +168,43 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Đồng ý điều khoản
                     _card(
                       child: CheckboxListTile(
                         value: _agree,
                         onChanged: (v) => setState(() => _agree = v ?? false),
-                        title: const Text(
-                            'Tôi đồng ý với Chính sách bảo mật thông tin và Quy chế.'),
+                        title: const Text('Tôi đồng ý với Chính sách và Quy chế.'),
                         controlAffinity: ListTileControlAffinity.leading,
                         dense: true,
                       ),
                     ),
-                    const SizedBox(height: 16),
                   ],
                 ),
               ),
-
-              // Thanh tổng tiền + nút thanh toán
               Container(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 8,
-                      offset: const Offset(0, -3),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+                color: Colors.white,
+                child: Row(
                   children: [
-                    // Chi tiết nếu có giảm/ bảo hiểm
-                    if (_discountRate > 0 || _insurance) ...[
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Tạm tính',
-                              style: TextStyle(
-                                  fontSize: 13, color: Colors.black54)),
-                          Text(_formatVND(basePrice),
+                          const Text('Tổng tiền', style: TextStyle(fontWeight: FontWeight.w700)),
+                          Text(_vnd(_total),
                               style: const TextStyle(
-                                  decoration: TextDecoration.lineThrough,
-                                  color: Colors.black45)),
+                                  fontSize: 18, color: Colors.orange, fontWeight: FontWeight.bold)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      if (_discountRate > 0)
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Giảm giá',
-                                style: TextStyle(
-                                    fontSize: 13, color: Colors.black54)),
-                            Text('- ${_formatVND(discount)}',
-                                style: const TextStyle(color: Colors.green)),
-                          ],
-                        ),
-                      if (_insurance) ...[
-                        const SizedBox(height: 4),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Bảo hiểm tai nạn',
-                                style: TextStyle(
-                                    fontSize: 13, color: Colors.black54)),
-                            Text('+ ${_formatVND(_insuranceFee)}',
-                                style: const TextStyle(color: Colors.black87)),
-                          ],
-                        ),
-                      ],
-                      const SizedBox(height: 6),
-                    ],
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Tổng tiền',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
-                        Text(
-                          _formatVND(total),
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
                     ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.amber,
-                              foregroundColor: Colors.black87,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 28, vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            onPressed: !_agree
-                                ? null
-                                : () {
-                              // TÍCH HỢP CỔNG THANH TOÁN TẠI ĐÂY
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                      'Đã thanh toán ${_formatVND(total)} bằng ${_method == 0 ? 'QR' : 'Thẻ'}'),
-                                ),
-                              );
-                            },
-                            child: const Text('Thanh toán'),
-                          ),
-                        ),
-                      ],
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.black87,
+                        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: !_agree ? null : _checkout,
+                      child: const Text('Thanh toán'),
                     ),
                   ],
                 ),
@@ -314,19 +216,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  // ------- widget phụ -------
   Widget _card({String? title, required Widget child}) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 2)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,9 +230,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
           if (title != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text(title,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w600)),
+              child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           child,
         ],
@@ -348,13 +242,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
       Text(k, style: const TextStyle(color: Colors.black54)),
-      Flexible(
-        child: Text(
-          v,
-          textAlign: TextAlign.right,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ),
+      Flexible(child: Text(v, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600))),
     ],
   );
 }
