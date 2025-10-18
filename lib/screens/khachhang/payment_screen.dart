@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/booking_service.dart';
-import '../../models/ve.dart';
-import '../../models/khachhang.dart';
+import '../../models/trip_info.dart';
 
 class PaymentScreen extends StatefulWidget {
   final int veId; // ví dụ: 1
@@ -12,7 +11,7 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  final _svc = BookingService();
+  final svc = BookingService();
 
   // ----- UI state -----
   final _couponCtrl = TextEditingController();
@@ -21,7 +20,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
   int _method = 0;            // 0: QR, 1: Thẻ
   bool _agree = true;
 
-  // ✅ Bảo hiểm tai nạn
+  //  Bảo hiểm tai nạn
   bool _insurance = false;
   static const num _insuranceFee = 10000; // 10.000đ
 
@@ -62,12 +61,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Thanh toán')),
       backgroundColor: const Color(0xFFF8F8F8),
-      body: FutureBuilder<({Ve ve, KhachHang kh})>(
-        future: () async {
-          final ve = await _svc.getVeById(widget.veId);
-          final kh = await _svc.getKhachHang(ve.khachHangId);
-          return (ve: ve, kh: kh);
-        }(),
+      body: FutureBuilder<TripInfoDTO>(
+        //  chỉ gọi 1 API đã tổng hợp toàn bộ dữ liệu
+        future: svc.buildTripInfoFromVe(widget.veId),
         builder: (ctx, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());
@@ -76,11 +72,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
             return Center(child: Text('Lỗi: ${snap.error}'));
           }
 
-          final ve = snap.data!.ve;
-          final kh = snap.data!.kh;
-          final basePrice = (ve.veGia is num)
-              ? (ve.veGia as num)
-              : num.tryParse(ve.veGia.toString()) ?? 0;
+          final trip = snap.data!;
+          final basePrice = trip.giaVe;
           final discount = basePrice * _discountRate;
           final subTotal = basePrice - discount;
           final total = subTotal + (_insurance ? _insuranceFee : 0);
@@ -91,15 +84,22 @@ class _PaymentScreenState extends State<PaymentScreen> {
                 child: ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    // Thông tin vé/khách
+                    // Thông tin chuyến đi
                     _card(
+                      title: 'Thông tin chuyến đi',
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _row('Mã vé', '#${ve.veId}'),
+                          _row('Chuyến xe', trip.nhaXe),
+                          _row('Loại xe', trip.loaiXe),
+                          _row('Biển số', trip.bienSo),
+                          _row('Giờ đi', trip.gioDi),
+                          _row('Từ', trip.benDi),
+                          _row('Đến', trip.benDen),
                           const Divider(height: 20),
-                          _row('Khách hàng', kh.khachHangName),
-                          const SizedBox(height: 6),
-                          _row('Số điện thoại', kh.sdt),
+                          _row('Khách hàng', trip.khName),
+                          _row('Số điện thoại', trip.khSdt),
+                          _row('Email', trip.khEmail),
                         ],
                       ),
                     ),
@@ -142,7 +142,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ✅ Tiện ích bổ sung: Bảo hiểm tai nạn
+                    //  Tiện ích bổ sung: Bảo hiểm tai nạn
                     _card(
                       title: 'Tiện ích bổ sung',
                       child: CheckboxListTile(
@@ -291,7 +291,6 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             onPressed: !_agree
                                 ? null
                                 : () {
-                              // TÍCH HỢP CỔNG THANH TOÁN TẠI ĐÂY
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
