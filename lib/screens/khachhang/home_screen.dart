@@ -1,3 +1,4 @@
+import 'package:datvexe_app/screens/khachhang/trip_search_screen.dart';
 import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../services/Auth_Services.dart';
@@ -36,6 +37,7 @@ class HomeScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text('Đã đăng nhập: ${user.sdt} (${user.role})'),
+
             const SizedBox(height: 24),
             ElevatedButton.icon(
               icon: const Icon(Icons.info_outline),
@@ -49,6 +51,7 @@ class HomeScreen extends StatelessWidget {
                 );
               },
             ),
+
             const SizedBox(height: 12),
             ElevatedButton.icon(
               icon: const Icon(Icons.payment),
@@ -58,6 +61,20 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const PaymentScreen(veId: demoVeId),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.payment),
+              label: const Text('Trips'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ChuyenListScreen(),
                   ),
                 );
               },

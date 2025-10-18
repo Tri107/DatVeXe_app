@@ -6,6 +6,9 @@ class Chuyen {
   final int tuyenDuongId;
   final int xeId;
   final int taiXeId;
+  final String taiXeName;
+  final String bienSo;
+  final String tuyenDuongName;
 
   Chuyen({
     required this.chuyenId,
@@ -15,6 +18,9 @@ class Chuyen {
     required this.tuyenDuongId,
     required this.xeId,
     required this.taiXeId,
+    required this.taiXeName,
+    required this.bienSo,
+    required this.tuyenDuongName,
   });
 
   factory Chuyen.fromJson(Map<String, dynamic> json) {
@@ -36,6 +42,9 @@ class Chuyen {
       taiXeId: json['TaiXe_id'] is int
           ? json['TaiXe_id']
           : int.tryParse(json['TaiXe_id'].toString()) ?? 0,
+      taiXeName: json['TaiXe_name'] ?? '',
+      bienSo: json['Bien_so'] ?? '',
+      tuyenDuongName: json['TuyenDuong_name'] ?? '',
     );
   }
 
@@ -47,5 +56,8 @@ class Chuyen {
     'TuyenDuong_id': tuyenDuongId,
     'Xe_id': xeId,
     'TaiXe_id': taiXeId,
+    'TaiXe_name': taiXeName,
+    'Bien_so': bienSo,
+    'TuyenDuong_name': tuyenDuongName,
   };
 }
