@@ -3,6 +3,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
+  static const String taiKhoan = '/TaiKhoan';
+  static const String tinhThanhPho = '/TinhThanhPho';
+
+
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: dotenv.env['API_BASE_URL'] ??
@@ -21,17 +25,21 @@ class Api {
       responseHeader: false,
       responseBody: true,
       error: true,
+
     ),
   );
 
   static Dio get client => _dio;
 
+
   // ---------- Token ----------
+
   static Future<void> setToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
+
 
   static Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -41,14 +49,18 @@ class Api {
     }
   }
 
+
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     _dio.options.headers.remove('Authorization');
   }
+  static String _p(String path) => path.startsWith('/') ? path : '/$path';
+
 
   // đảm bảo path luôn có dấu '/' đầu
   static String _p(String path) => path.startsWith('/') ? path : '/$path';
+
 
   // ---------- Low-level ----------
   static Future<Response> get(String path, {Map<String, dynamic>? query}) =>
@@ -71,6 +83,7 @@ class Api {
     return r.data;
   }
 
+
   static Future<dynamic> postJson(String path, dynamic data) async {
     final r = await post(path, data);
     _throwIfClientError(r);
@@ -91,6 +104,13 @@ class Api {
   }
 
 
+  static Future<dynamic> postJson(String path, dynamic data) async {
+    final r = await post(path, data);
+    _throwIfClientError(r);
+    return r.data;
+  }
+
+
   // ---------- Format lỗi đẹp ----------
   static String handleError(DioException e) {
     if (e.response != null) {
@@ -99,5 +119,7 @@ class Api {
     } else {
       return "Không thể kết nối tới server. Vui lòng thử lại.";
     }
+
   }
+
 }
