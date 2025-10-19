@@ -1,20 +1,24 @@
 class TinhThanhPho {
-  final int id;
-  final String name;
+  final int tinhThanhPhoId;
+  final String tinhThanhPhoName;
 
-  TinhThanhPho({required this.id, required this.name});
+  TinhThanhPho({
+    required this.tinhThanhPhoId,
+    required this.tinhThanhPhoName,
+  });
 
   factory TinhThanhPho.fromJson(Map<String, dynamic> json) {
     return TinhThanhPho(
-      id: json['tinhThanhPho_id'] ?? json['id'] ?? 0,
-      name: json['tinhThanhPho_name'] ?? json['name'] ?? '',
+      tinhThanhPhoId: json['TinhThanhPho_id'] ?? json['tinhThanhPho_id'] ?? 0,
+      tinhThanhPhoName:
+      json['TinhThanhPho_name'] ?? json['tinhThanhPho_name'] ?? '',
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'tinhThanhPho_id': id,
-      'tinhThanhPho_name': name,
+      'TinhThanhPho_id': tinhThanhPhoId,
+      'TinhThanhPho_name': tinhThanhPhoName,
     };
   }
 }

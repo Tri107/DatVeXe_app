@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
 import '../../models/TaiKhoan.dart';
+import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
+import '../../services/tinh_thanh_pho_service.dart';
 import '../auth/login_screen.dart';
 import 'profile_screen.dart';
-import '../../config/api.dart';
 
 class HomeScreen extends StatefulWidget {
   final TaiKhoan user;
@@ -17,9 +17,11 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   DateTime? _selectedDate;
   int _currentIndex = 0;
-  List<String> _tinhThanh = [];
+  List<TinhThanhPho> _tinhThanhList = [];
   String? _fromSelected;
   String? _toSelected;
+
+  final _tinhThanhService = TinhThanhPhoService();
 
   @override
   void initState() {
@@ -27,17 +29,29 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadTinhThanhPho();
   }
 
+  /// 🔹 Lấy danh sách tỉnh/thành phố từ API
   Future<void> _loadTinhThanhPho() async {
     try {
-      final Response res = await Api.getTinhThanhPho();
-      if (res.statusCode == 200) {
+      final list = await _tinhThanhService.getAll();
+
+      // 🔸 Lọc trùng theo tên (phòng trường hợp API trả về trùng)
+      final distinctList = list.fold<List<TinhThanhPho>>([], (acc, e) {
+        if (!acc.any((x) => x.tinhThanhPhoName == e.tinhThanhPhoName)) {
+          acc.add(e);
+        }
+        return acc;
+      });
+
+      if (mounted) {
         setState(() {
-          _tinhThanh = List<String>.from(
-            (res.data as List).map((e) => e['TinhThanhPho_name'].toString()),
-          );
-          _fromSelected = _tinhThanh.isNotEmpty ? _tinhThanh.first : null;
-          _toSelected =
-          _tinhThanh.length > 1 ? _tinhThanh[1] : _tinhThanh.first;
+          _tinhThanhList = distinctList;
+          // Chọn mặc định 2 tỉnh đầu tiên (nếu có)
+          if (_tinhThanhList.isNotEmpty) {
+            _fromSelected = _tinhThanhList.first.tinhThanhPhoName;
+            _toSelected = _tinhThanhList.length > 1
+                ? _tinhThanhList[1].tinhThanhPhoName
+                : _tinhThanhList.first.tinhThanhPhoName;
+          }
         });
       }
     } catch (e) {
@@ -45,7 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  // 🗓️ Hiển thị lịch chọn ngày
+  /// 🗓️ Chọn ngày đi
   Future<void> _chonNgayDi(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -121,7 +135,9 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
 
       // 🟨 Nội dung chính
-      body: SingleChildScrollView(
+      body: _tinhThanhList.isEmpty
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -138,7 +154,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // 🔽 Form tìm kiếm
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -154,24 +171,32 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Nơi xuất phát", style: TextStyle(color: Colors.grey)),
+                  const Text("Nơi xuất phát",
+                      style: TextStyle(color: Colors.grey)),
                   DropdownButton<String>(
                     isExpanded: true,
                     value: _fromSelected,
-                    items: _tinhThanh
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    items: _tinhThanhList
+                        .map((e) => DropdownMenuItem(
+                      value: e.tinhThanhPhoName,
+                      child: Text(e.tinhThanhPhoName),
+                    ))
                         .toList(),
                     onChanged: (val) {
                       setState(() => _fromSelected = val);
                     },
                   ),
                   const Divider(),
-                  const Text("Bạn muốn đi đâu?", style: TextStyle(color: Colors.grey)),
+                  const Text("Bạn muốn đi đâu?",
+                      style: TextStyle(color: Colors.grey)),
                   DropdownButton<String>(
                     isExpanded: true,
                     value: _toSelected,
-                    items: _tinhThanh
-                        .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                    items: _tinhThanhList
+                        .map((e) => DropdownMenuItem(
+                      value: e.tinhThanhPhoName,
+                      child: Text(e.tinhThanhPhoName),
+                    ))
                         .toList(),
                     onChanged: (val) {
                       setState(() => _toSelected = val);
@@ -179,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(),
 
-                  // 🗓️ Chọn ngày đi (popup)
+                  // 🗓️ Chọn ngày đi
                   GestureDetector(
                     onTap: () => _chonNgayDi(context),
                     child: Container(
@@ -201,7 +226,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   : FontWeight.normal,
                             ),
                           ),
-                          const Icon(Icons.calendar_month, color: Colors.grey),
+                          const Icon(Icons.calendar_month,
+                              color: Colors.grey),
                         ],
                       ),
                     ),
@@ -232,12 +258,20 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding:
+              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text("Tìm kiếm gần đây",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 16)),
             ),
-            _RecentSearch(from: "Hồ Chí Minh", to: "Đắk Lắk", date: "CN, 12/10/2025"),
-            _RecentSearch(from: "Hồ Chí Minh", to: "Đắk Lắk", date: "CN, 05/10/2025"),
+            const _RecentSearch(
+                from: "Hồ Chí Minh",
+                to: "Đắk Lắk",
+                date: "CN, 12/10/2025"),
+            const _RecentSearch(
+                from: "Hồ Chí Minh",
+                to: "Đắk Lắk",
+                date: "CN, 05/10/2025"),
             const SizedBox(height: 20),
           ],
         ),
@@ -250,9 +284,7 @@ class _HomeScreenState extends State<HomeScreen> {
           if (index == 2) {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (_) => const ProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const ProfileScreen()),
             );
           } else {
             setState(() => _currentIndex = index);
@@ -305,7 +337,8 @@ class _RecentSearch extends StatelessWidget {
               Text(to, style: const TextStyle(fontWeight: FontWeight.bold))
             ]),
             const SizedBox(height: 4),
-            Text(date, style: const TextStyle(color: Colors.grey, fontSize: 13))
+            Text(date,
+                style: const TextStyle(color: Colors.grey, fontSize: 13))
           ]),
           const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
         ],
