@@ -10,7 +10,7 @@ class Api {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: dotenv.env['API_BASE_URL'] ??
-          'https://gx33klvh-3000.asse.devtunnels.ms/api',
+          'https://9pwmpnpb-3000.asse.devtunnels.ms/api',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
@@ -58,9 +58,6 @@ class Api {
   static String _p(String path) => path.startsWith('/') ? path : '/$path';
 
 
-  // đảm bảo path luôn có dấu '/' đầu
-  static String _p(String path) => path.startsWith('/') ? path : '/$path';
-
 
   // ---------- Low-level ----------
   static Future<Response> get(String path, {Map<String, dynamic>? query}) =>
@@ -101,13 +98,6 @@ class Api {
         response: r,
       );
     }
-  }
-
-
-  static Future<dynamic> postJson(String path, dynamic data) async {
-    final r = await post(path, data);
-    _throwIfClientError(r);
-    return r.data;
   }
 
 
