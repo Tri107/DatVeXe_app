@@ -1,14 +1,23 @@
+import 'package:datvexe_app/screens/khachhang/trip_search_screen.dart';
 import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
 import '../../services/tinh_thanh_pho_service.dart';
 import '../auth/login_screen.dart';
+
 import 'profile_screen.dart';
+
+import '../khachhang/payment_screen.dart';
+import '../khachhang/trip_info_screen.dart';
+
 
 class HomeScreen extends StatefulWidget {
   final TaiKhoan user;
   const HomeScreen({super.key, required this.user});
+
+  // tạm test với veId=1 (bạn đã insert trong DB)
+  static const int demoVeId = 1;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();

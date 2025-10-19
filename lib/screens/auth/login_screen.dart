@@ -48,7 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
         SnackBar(content: Text('Đăng nhập thành công: ${user.sdt} (${user.role})')),
       );
 
-      // ✅ Điều hướng demo
+      // Điều hướng demo
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
