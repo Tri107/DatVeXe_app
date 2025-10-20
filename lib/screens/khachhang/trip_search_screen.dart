@@ -4,20 +4,33 @@ import 'package:intl/intl.dart';
 import '../../models/Chuyen.dart';
 import '../../services/Trip_Service.dart';
 
-class ChuyenListScreen extends StatefulWidget {
-  const ChuyenListScreen({Key? key}) : super(key: key);
+class TripSearchScreen  extends StatefulWidget {
+  final String from;
+  final String to;
+  final DateTime? date;
+
+  const TripSearchScreen ({
+    Key? key,
+    required this.from,
+    required this.to,
+    this.date,
+  }) : super(key: key);
 
   @override
-  _ChuyenListScreenState createState() => _ChuyenListScreenState();
+  _TripSearchScreenState createState() => _TripSearchScreenState();
 }
 
-class _ChuyenListScreenState extends State<ChuyenListScreen> {
+class _TripSearchScreenState extends State<TripSearchScreen> {
   late Future<List<Chuyen>> _futureChuyenList;
 
   @override
   void initState() {
     super.initState();
-    _futureChuyenList = ChuyenService.fetchChuyenList();
+    _futureChuyenList = ChuyenService.fetchSearchTrip(
+      widget.from,
+      widget.to,
+      widget.date,
+    );
   }
 
   @override
