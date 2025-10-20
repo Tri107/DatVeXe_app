@@ -1,89 +1,134 @@
-import 'package:dio/dio.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../models/TaiKhoan.dart';
 
 class AuthService {
   // 🔹 Gửi OTP
   static Future<bool> sendOtp(String sdt) async {
+    final url = Uri.parse("${Api.client.options.baseUrl}/auth/send-otp");
     try {
-      final response = await Api.post('/auth/send-otp', {'SDT': sdt});
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'SDT': sdt}),
+      );
+
       if (response.statusCode == 200) {
-        print(' OTP sent successfully');
+        print('✅ OTP sent successfully');
         return true;
       } else {
-        print(' Send OTP failed: ${response.data}');
+        print('❌ Send OTP failed: ${response.body}');
         return false;
       }
-    } on DioException catch (e) {
-      print(' Lỗi gửi OTP: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('⚠️ Lỗi gửi OTP: $e');
       return false;
     }
   }
 
   // 🔹 Xác thực OTP + đăng ký tài khoản
   static Future<bool> verifyOtp(String sdt, String password, String otp) async {
+    final url = Uri.parse("${Api.client.options.baseUrl}/auth/verify-otp");
     try {
-      final response = await Api.post('/auth/verify-otp', {
-        'SDT': sdt,
-        'password': password,
-        'otp': otp,
-      });
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'SDT': sdt,
+          'password': password,
+          'otp': otp,
+        }),
+      );
 
       if (response.statusCode == 201) {
-        print(' Đăng ký thành công');
+        print('✅ Đăng ký thành công');
         return true;
       } else {
-        print(' Lỗi đăng ký: ${response.data}');
+        print('❌ Lỗi đăng ký: ${response.body}');
         return false;
       }
-    } on DioException catch (e) {
-      print(' Lỗi xác thực OTP: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('⚠️ Lỗi xác thực OTP: $e');
       return false;
     }
   }
 
   // 🔹 Đăng nhập
   static Future<TaiKhoan?> login(String sdt, String password) async {
+    final url = Uri.parse("${Api.client.options.baseUrl}/auth/login");
     try {
-      final response = await Api.post('/auth/login', {
-        'SDT': sdt,
-        'password': password,
-      });
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'SDT': sdt,
+          'password': password,
+        }),
+      );
 
       if (response.statusCode == 200) {
-        final token = response.data['token'];
-        final userData = response.data['user'];
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        final userData = data['user'];
 
-        // Lưu token vào SharedPreferences và gắn header
+        // Lưu token vào SharedPreferences + cập nhật header
         await Api.setToken(token);
 
         return TaiKhoan.fromJson(userData);
+      } else {
+        print('❌ Lỗi đăng nhập: ${response.body}');
+        return null;
       }
-      return null;
-    } on DioException catch (e) {
-      print(' Lỗi đăng nhập: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('⚠️ Lỗi đăng nhập: $e');
       return null;
     }
   }
 
   // 🔹 Lấy thông tin người dùng hiện tại
   static Future<TaiKhoan?> me() async {
+    final url = Uri.parse("${Api.client.options.baseUrl}/auth/me");
+    await Api.loadToken();
+
     try {
-      await Api.loadToken(); // nạp lại token nếu có
-      final response = await Api.get('/auth/me');
+      final response = await http.get(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': Api.client.options.headers['Authorization'] ?? '',
+        },
+      );
+
       if (response.statusCode == 200) {
-        return TaiKhoan.fromJson(response.data['user']);
+        final data = jsonDecode(response.body);
+        return TaiKhoan.fromJson(data['user']);
+      } else {
+        print('❌ Token không hợp lệ hoặc hết hạn');
       }
-    } on DioException catch (e) {
-      print(' Lỗi xác thực token: ${e.response?.data ?? e.message}');
+    } catch (e) {
+      print('⚠️ Lỗi xác thực token: $e');
     }
     return null;
   }
 
   // 🔹 Đăng xuất
   static Future<void> logout() async {
+    final url = Uri.parse("${Api.client.options.baseUrl}/auth/logout");
     try {
-      await Api.post('/auth/logout', {});
+      await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': Api.client.options.headers['Authorization'] ?? '',
+        },
+      );
     } catch (_) {}
     await Api.clearToken();
   }

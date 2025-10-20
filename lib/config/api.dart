@@ -3,9 +3,14 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
+  static const String taiKhoan = '/TaiKhoan';
+  static const String tinhThanhPho = '/TinhThanhPho';
+
+
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: dotenv.env['API_BASE_URL']??'',
+      baseUrl: dotenv.env['API_BASE_URL'] ??
+          'https://9pwmpnpb-3000.asse.devtunnels.ms/api',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
@@ -19,17 +24,21 @@ class Api {
       responseHeader: false,
       responseBody: true,
       error: true,
+
     ),
   );
 
   static Dio get client => _dio;
 
+
   // ---------- Token ----------
+
   static Future<void> setToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
+
 
   static Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -39,14 +48,15 @@ class Api {
     }
   }
 
+
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     _dio.options.headers.remove('Authorization');
   }
-
-  // đảm bảo path luôn có dấu '/' đầu
   static String _p(String path) => path.startsWith('/') ? path : '/$path';
+
+
 
   // ---------- Low-level ----------
   static Future<Response> get(String path, {Map<String, dynamic>? query}) =>
@@ -68,6 +78,7 @@ class Api {
     _throwIfClientError(r);
     return r.data;
   }
+
 
   static Future<dynamic> postJson(String path, dynamic data) async {
     final r = await post(path, data);
@@ -97,5 +108,7 @@ class Api {
     } else {
       return "Không thể kết nối tới server. Vui lòng thử lại.";
     }
+
   }
+
 }

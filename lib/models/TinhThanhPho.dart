@@ -9,15 +9,16 @@ class TinhThanhPho {
 
   factory TinhThanhPho.fromJson(Map<String, dynamic> json) {
     return TinhThanhPho(
-      tinhThanhPhoId: json['TinhThanhPho_id'] is int
-          ? json['TinhThanhPho_id']
-          : int.tryParse(json['TinhThanhPho_id'].toString()) ?? 0,
-      tinhThanhPhoName: json['TinhThanhPho_name'] ?? '',
+      tinhThanhPhoId: json['TinhThanhPho_id'] ?? json['tinhThanhPho_id'] ?? 0,
+      tinhThanhPhoName:
+      json['TinhThanhPho_name'] ?? json['tinhThanhPho_name'] ?? '',
     );
   }
 
-  Map<String, dynamic> toJson() => {
-    'TinhThanhPho_id': tinhThanhPhoId,
-    'TinhThanhPho_name': tinhThanhPhoName,
-  };
+  Map<String, dynamic> toJson() {
+    return {
+      'TinhThanhPho_id': tinhThanhPhoId,
+      'TinhThanhPho_name': tinhThanhPhoName,
+    };
+  }
 }
