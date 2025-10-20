@@ -9,6 +9,8 @@ class Chuyen {
   final String taiXeName;
   final String bienSo;
   final String tuyenDuongName;
+  final String diemDi;
+  final String diemDen;
 
   Chuyen({
     required this.chuyenId,
@@ -21,6 +23,8 @@ class Chuyen {
     required this.taiXeName,
     required this.bienSo,
     required this.tuyenDuongName,
+    required this.diemDi,
+    required this.diemDen
   });
 
   factory Chuyen.fromJson(Map<String, dynamic> json) {
@@ -45,6 +49,8 @@ class Chuyen {
       taiXeName: json['TaiXe_name'] ?? '',
       bienSo: json['Bien_so'] ?? '',
       tuyenDuongName: json['TuyenDuong_name'] ?? '',
+      diemDi: json['DiemDi'] ?? '',
+      diemDen: json['DiemDen'] ?? '',
     );
   }
 
@@ -59,5 +65,7 @@ class Chuyen {
     'TaiXe_name': taiXeName,
     'Bien_so': bienSo,
     'TuyenDuong_name': tuyenDuongName,
+    'DiemDi': diemDi,
+    'DiemDen': diemDen,
   };
 }

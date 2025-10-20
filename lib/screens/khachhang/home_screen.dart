@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
+import '../../services/Trip_Service.dart';
 import '../../services/tinh_thanh_pho_service.dart';
 import '../auth/login_screen.dart';
 
@@ -38,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadTinhThanhPho();
   }
 
-  /// 🔹 Lấy danh sách tỉnh/thành phố từ API
+  /// Lấy danh sách tỉnh/thành phố từ API
   Future<void> _loadTinhThanhPho() async {
     try {
       final list = await _tinhThanhService.getAll();
@@ -68,7 +69,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// 🗓️ Chọn ngày đi
+  ///  Chọn ngày đi
   Future<void> _chonNgayDi(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -143,7 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // 🟨 Nội dung chính
+      // Nội dung chính
       body: _tinhThanhList.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -155,13 +156,13 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               child: const Text(
-                "Cam kết hoàn 150% nếu nhà xe không cung cấp dịch vụ vận chuyển",
+                "Cam kết KHÔNG hoàn tiền nếu nhà xe không cung cấp dịch vụ vận chuyển",
                 style: TextStyle(color: Colors.white, fontSize: 14),
                 textAlign: TextAlign.center,
               ),
             ),
 
-            // 🔽 Form tìm kiếm
+            //Form tìm kiếm
             Container(
               margin: const EdgeInsets.symmetric(
                   horizontal: 16, vertical: 10),
@@ -213,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(),
 
-                  // 🗓️ Chọn ngày đi
+                  // Chọn ngày đi
                   GestureDetector(
                     onTap: () => _chonNgayDi(context),
                     child: Container(
@@ -251,9 +252,25 @@ class _HomeScreenState extends State<HomeScreen> {
                           borderRadius: BorderRadius.circular(8)),
                     ),
                     onPressed: () {
-                      debugPrint(
-                          "🚗 Từ $_fromSelected -> $_toSelected, Ngày: $_selectedDate");
+                      if (_fromSelected == null || _toSelected == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Vui lòng chọn điểm đi và điểm đến!")),
+                        );
+                        return;
+                      }
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TripSearchScreen(
+                            from: _fromSelected!,
+                            to: _toSelected!,
+                            date: _selectedDate, // <-- Cho phép null
+                          ),
+                        ),
+                      );
                     },
+
                     child: const Text(
                       "Tìm kiếm",
                       style: TextStyle(
@@ -286,7 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // ⚫ Bottom Navigation
+      //Bottom Navigation
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -313,7 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// 🧩 Widget phụ
+//Widget phụ
 class _RecentSearch extends StatelessWidget {
   final String from;
   final String to;
