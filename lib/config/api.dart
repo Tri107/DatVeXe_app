@@ -14,7 +14,6 @@ class Api {
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
-      // cho phép tự xử lý 4xx (Dio sẽ không throw ngay)
       validateStatus: (code) => code != null && code < 500,
     ),
   )..interceptors.add(

@@ -11,6 +11,7 @@ import 'profile_screen.dart';
 
 import '../khachhang/payment_screen.dart';
 import '../khachhang/trip_info_screen.dart';
+import 'map_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {

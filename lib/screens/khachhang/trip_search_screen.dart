@@ -61,7 +61,7 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
 
               return GestureDetector(
                 onTap: () {
-                  // 👉 Khi nhấn vào chuyến, chuyển sang TripInfoScreen
+                  //  Khi nhấn vào chuyến, chuyển sang TripInfoScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
