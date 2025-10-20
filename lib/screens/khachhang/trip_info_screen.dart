@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/api.dart';
 import '../../models/trip_info.dart';
+import 'map_screen.dart';
 import 'payment_screen.dart';
 
 class TripInfoScreen extends StatefulWidget {
@@ -53,6 +54,29 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                     _tile('Giờ khởi hành', d.gioDi),
                     _tile('Bến đi', d.benDi),
                     _tile('Bến đến', d.benDen),
+                    const SizedBox(height: 8),
+
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MapScreen(
+                              startName: d.benDi,
+                              endName: d.benDen,
+                            ),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.map, color: Colors.white),
+                      label: const Text('Xem đường đi'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
                     const Divider(height: 32),
                     const Text('Thông tin liên hệ', style: TextStyle(fontWeight: FontWeight.bold)),
                     _tile('Họ tên', d.khName),

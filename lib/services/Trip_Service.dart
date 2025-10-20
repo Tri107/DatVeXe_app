@@ -2,7 +2,7 @@ import '../config/api.dart';
 import '../models/Chuyen.dart';
 
 class ChuyenService {
-  // Lấy danh sách chuyến xe từ API
+
   static Future<List<Chuyen>> fetchChuyenList() async {
     try {
       final data = await Api.getJson('/chuyen');

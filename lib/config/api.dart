@@ -5,12 +5,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 class Api {
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: dotenv.env['API_BASE_URL'] ??
-          'https://gx33klvh-3000.asse.devtunnels.ms/api',
+      baseUrl: dotenv.env['API_BASE_URL']??'',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},
-      // cho phép tự xử lý 4xx (Dio sẽ không throw ngay)
       validateStatus: (code) => code != null && code < 500,
     ),
   )..interceptors.add(

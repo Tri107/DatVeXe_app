@@ -5,6 +5,7 @@ import '../../services/Auth_Services.dart';
 import '../auth/login_screen.dart';
 import '../khachhang/payment_screen.dart';
 import '../khachhang/trip_info_screen.dart';
+import 'map_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final TaiKhoan user;
@@ -75,6 +76,20 @@ class HomeScreen extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ChuyenListScreen(),
+                  ),
+                );
+              },
+
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.payment),
+              label: const Text('test map'),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MapScreen(),
                   ),
                 );
               },

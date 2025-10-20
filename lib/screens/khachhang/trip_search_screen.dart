@@ -48,7 +48,7 @@ class _ChuyenListScreenState extends State<ChuyenListScreen> {
 
               return GestureDetector(
                 onTap: () {
-                  // 👉 Khi nhấn vào chuyến, chuyển sang TripInfoScreen
+                  //  Khi nhấn vào chuyến, chuyển sang TripInfoScreen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
