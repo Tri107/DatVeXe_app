@@ -17,14 +17,14 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        print('✅ OTP sent successfully');
+        print(' OTP sent successfully');
         return true;
       } else {
-        print('❌ Send OTP failed: ${response.body}');
+        print(' Send OTP failed: ${response.body}');
         return false;
       }
     } catch (e) {
-      print('⚠️ Lỗi gửi OTP: $e');
+      print(' Lỗi gửi OTP: $e');
       return false;
     }
   }
