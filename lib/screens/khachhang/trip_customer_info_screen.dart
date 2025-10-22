@@ -1,11 +1,15 @@
+// lib/screens/khachhang/trip_customer_info_screen.dart
+import 'package:datvexe_app/models/KhachHang.dart';
+import 'package:datvexe_app/screens/khachhang/payment_screen.dart';
+import 'package:datvexe_app/services/Ve_Service.dart';
 import 'package:flutter/material.dart';
 import 'package:datvexe_app/services/khachhang_service.dart';
-import 'package:datvexe_app/models/KhachHang.dart';
+import 'package:email_validator/email_validator.dart';
 
 class TripCustomerInfoScreen extends StatefulWidget {
-  final String chuyenId;
+  final int chuyenId;
   final double gia;
-  final String? phone;
+  final String? phone; // SĐT của người dùng đang đăng nhập
 
   const TripCustomerInfoScreen({
     super.key,
@@ -20,28 +24,106 @@ class TripCustomerInfoScreen extends StatefulWidget {
 
 class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final khService = KhachHangService();
+  final _khService = KhachHangService();
 
   final nameCtrl = TextEditingController();
   final phoneCtrl = TextEditingController();
   final emailCtrl = TextEditingController();
 
+  KhachHang? _loadedCustomer;
+
+  bool _isProcessing = false;
+  bool _isLoadingData = true;
+  bool _hasExistingCustomer = false;
+
   @override
   void initState() {
     super.initState();
-    if (widget.phone != null && widget.phone!.isNotEmpty) {
-      phoneCtrl.text = widget.phone!;
-      _loadKhachHang(widget.phone!);
+    String? phoneToLoad = widget.phone;
+
+    // Quan trọng: Phải có SĐT được truyền vào từ màn hình trước thì mới tự động load
+    if (phoneToLoad != null && phoneToLoad.isNotEmpty) {
+      phoneCtrl.text = phoneToLoad;
+      _loadKhachHang(phoneToLoad);
+    } else {
+      // Nếu không có SĐT, không làm gì cả và hiển thị màn hình nhập mới
+      setState(() {
+        _isLoadingData = false;
+      });
     }
   }
 
   Future<void> _loadKhachHang(String phone) async {
-    final kh = await khService.getKhachHangByPhone(phone);
-    if (kh != null) {
+    final kh = await _khService.getKhachHangByPhone(phone);
+    if (mounted) {
       setState(() {
-        nameCtrl.text = kh.khachHangName;
-        emailCtrl.text = kh.email;
+        if (kh != null) {
+          // Nếu tìm thấy khách hàng, đổ dữ liệu vào UI
+          nameCtrl.text = kh.khachHangName;
+          emailCtrl.text = kh.email;
+          _hasExistingCustomer = true;
+          _loadedCustomer = kh; // Lưu lại khách hàng để quyết định update
+        } else {
+          // Nếu không tìm thấy, UI sẽ là các ô trống để nhập mới
+          _hasExistingCustomer = false;
+          _loadedCustomer = null;
+        }
+        _isLoadingData = false; // Hoàn tất loading
       });
+    }
+  }
+
+  Future<KhachHang> _processCustomerInfo() {
+    // Dựa vào việc `_loadedCustomer` có tồn tại hay không để quyết định
+    if (_loadedCustomer != null) {
+      // NẾU CÓ: Gọi hàm UPDATE.
+      print("--- Logic: Khách hàng đã tồn tại. Sẽ gọi hàm UPDATE. ---");
+      return _khService.updateKhachHang(
+        customerId: _loadedCustomer!.khachHangId,
+        name: nameCtrl.text, // Lấy giá trị mới từ ô nhập liệu
+        phone: phoneCtrl.text,
+        email: emailCtrl.text,
+      );
+    } else {
+      // NẾU KHÔNG CÓ: Gọi hàm CREATE.
+      print("--- Logic: Khách hàng chưa tồn tại. Sẽ gọi hàm CREATE. ---");
+      return _khService.createKhachHang(
+        name: nameCtrl.text,
+        phone: phoneCtrl.text,
+        email: emailCtrl.text,
+      );
+    }
+  }
+
+  Future<void> _handleConfirmAndContinue() async {
+    if (!_formKey.currentState!.validate() || _isProcessing) {
+      return;
+    }
+    setState(() { _isProcessing = true; });
+
+    try {
+      final KhachHang customer = await _processCustomerInfo();
+      final int veId = await VeService.createVe(
+        chuyenId: widget.chuyenId,
+        khachHangId: customer.khachHangId,
+        giaVe: widget.gia,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => PaymentScreen(veId: veId)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Đã xảy ra lỗi: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() { _isProcessing = false; });
+      }
     }
   }
 
@@ -49,91 +131,75 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Thông tin liên hệ"),
-        backgroundColor: Colors.blue,
+        title: const Text("Thông tin hành khách"),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 1,
       ),
-      body: SingleChildScrollView(
+      body: _isLoadingData
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Thông tin liên hệ",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              Text(
+                _hasExistingCustomer
+                    ? "Vui lòng xác nhận thông tin của bạn"
+                    : "Vui lòng nhập thông tin hành khách",
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
               const SizedBox(height: 16),
-
-              // Tên người đi
               TextFormField(
                 controller: nameCtrl,
                 decoration: const InputDecoration(
                   labelText: "Tên người đi *",
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person_outline),
                 ),
+                validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập tên' : null,
               ),
               const SizedBox(height: 16),
-
-              // Số điện thoại
               TextFormField(
                 controller: phoneCtrl,
                 decoration: const InputDecoration(
                   labelText: "Số điện thoại *",
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.phone_outlined),
                 ),
                 keyboardType: TextInputType.phone,
+                validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập số điện thoại' : null,
               ),
               const SizedBox(height: 16),
-
-              // Email
               TextFormField(
                 controller: emailCtrl,
                 decoration: const InputDecoration(
                   labelText: "Email để nhận thông tin vé *",
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.email_outlined),
                 ),
                 keyboardType: TextInputType.emailAddress,
+                validator: (value) {
+                  if (value == null || value.isEmpty) return 'Vui lòng nhập email';
+                  if (!EmailValidator.validate(value)) return 'Email không hợp lệ';
+                  return null;
+                },
               ),
-              const SizedBox(height: 20),
-
-              // Thông báo nhỏ
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  border: Border.all(color: Colors.green),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: Colors.green),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "Thông tin đơn hàng sẽ được gửi đến số điện thoại và email bạn cung cấp.",
-                        style: TextStyle(color: Colors.green, fontSize: 13),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Nút tiếp tục
+              const SizedBox(height: 24),
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.yellow.shade700,
-                    minimumSize: const Size(double.infinity, 50)),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text("Đã nhấn Tiếp tục"),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
-                },
-                child: const Text(
-                  "Tiếp tục",
-                  style: TextStyle(color: Colors.black),
+                    backgroundColor: Colors.amber,
+                    foregroundColor: Colors.black87,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                onPressed: _isProcessing ? null : _handleConfirmAndContinue,
+                child: _isProcessing
+                    ? const CircularProgressIndicator(color: Colors.black54)
+                    : Text(
+                  _hasExistingCustomer ? "Xác nhận & Tiếp tục" : "Lưu & Tiếp tục",
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ],
