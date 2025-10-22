@@ -9,8 +9,7 @@ class Api {
 
   static final Dio _dio = Dio(
     BaseOptions(
-      baseUrl: dotenv.env['API_BASE_URL'] ??
-          'https://9pwmpnpb-3000.asse.devtunnels.ms/api',
+      baseUrl: dotenv.env['API_BASE_URL'] ??'',
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
       headers: {'Content-Type': 'application/json'},

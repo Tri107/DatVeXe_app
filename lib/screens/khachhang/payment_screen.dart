@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../config/api.dart';
 import '../../models/trip_info.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../services/Payment_Service.dart';
 
 class PaymentScreen extends StatefulWidget {
   final int veId;
@@ -11,16 +13,16 @@ class PaymentScreen extends StatefulWidget {
 }
 
 class _PaymentScreenState extends State<PaymentScreen> {
-  // summary cache
+
   late Future<TripInfoDTO> _futureSummary;
   num _basePrice = 0;
   num _total = 0;
 
-  // UI state
+
   final _couponCtrl = TextEditingController();
   String? _appliedCoupon;
   bool _insurance = false;
-  int _method = 0; // 0: QR, 1: Card
+  int _method = 0;
   bool _agree = true;
 
   @override
@@ -56,16 +58,37 @@ class _PaymentScreenState extends State<PaymentScreen> {
   }
 
   Future<void> _checkout() async {
+    if (!_agree) return;
+
+
+    if (_method == 0) {
+      final paymentUrl = await PaymentService.createVNPay(widget.veId, _total.toDouble());
+      if (paymentUrl != null) {
+        final uri = Uri.parse(paymentUrl);
+        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          throw Exception('Không thể mở liên kết $uri');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tạo được liên kết thanh toán VNPay')),
+        );
+      }
+      return;
+    }
+
+
     final r = await Api.post('/booking/${widget.veId}/checkout', {
       'coupon': _appliedCoupon,
       'insurance': _insurance,
       'method': _method == 0 ? 'qr' : 'card',
     });
+
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${r.data['message'] ?? 'Thanh toán thành công'}')),
     );
   }
+
 
   String _vnd(num n) =>
       n.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.') + ' đ';

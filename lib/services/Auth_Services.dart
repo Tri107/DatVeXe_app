@@ -61,6 +61,8 @@ class AuthService {
   // 🔹 Đăng nhập
   static Future<TaiKhoan?> login(String sdt, String password) async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/login");
+    print('🔗 API base URL hiện tại: ${Api.client.options.baseUrl}');
+    print('📤 Request gửi tới: $url');
     try {
       final response = await http.post(
         url,
