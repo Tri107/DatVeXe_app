@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/api.dart';
+import '../../models/trip_info.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../services/Payment_Service.dart';
 import '../../models/Ve.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -60,6 +63,33 @@ class _PaymentScreenState extends State<PaymentScreen> {
     await Future.delayed(const Duration(seconds: 2));
     setState(() => _isProcessing = false);
 
+  Future<void> _checkout() async {
+    if (!_agree) return;
+
+
+    if (_method == 0) {
+      final paymentUrl = await PaymentService.createVNPay(widget.veId, _total.toDouble());
+      if (paymentUrl != null) {
+        final uri = Uri.parse(paymentUrl);
+        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+          throw Exception('Không thể mở liên kết $uri');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không tạo được liên kết thanh toán VNPay')),
+        );
+      }
+      return;
+    }
+
+
+    final r = await Api.post('/booking/${widget.veId}/checkout', {
+      'coupon': _appliedCoupon,
+      'insurance': _insurance,
+      'method': _method == 0 ? 'qr' : 'card',
+    });
+
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Chức năng thanh toán đang được phát triển.'),
@@ -68,9 +98,9 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  String _formatCurrency(num n) {
-    return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);
-  }
+
+  String _vnd(num n) =>
+      n.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (m) => '.') + ' đ';
 
   @override
   Widget build(BuildContext context) {
