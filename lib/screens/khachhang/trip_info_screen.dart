@@ -1,16 +1,16 @@
 // lib/screens/khachhang/trip_info_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // ✅ thêm import
 import '../../models/Chuyen.dart';
 import '../../services/Trip_Service.dart';
 import 'map_screen.dart';
-// SỬA: Import màn hình thông tin khách hàng
-import 'trip_customer_info_screen.dart';
-// SỬA: Xóa import 'payment_screen.dart' và 'api.dart' vì không dùng ở đây nữa
+import 'trip_customer_info_screen.dart'; // ✅ import đúng màn hình
 
 class TripInfoScreen extends StatefulWidget {
   final int chuyenId;
-  const TripInfoScreen({super.key, required this.chuyenId});
+  final String? phone;
+  const TripInfoScreen({super.key, required this.chuyenId,this.phone});
 
   @override
   State<TripInfoScreen> createState() => _TripInfoScreenState();
@@ -19,7 +19,7 @@ class TripInfoScreen extends StatefulWidget {
 class _TripInfoScreenState extends State<TripInfoScreen> {
   late Future<Chuyen> _futureChuyen;
 
-  // GIẢ ĐỊNH GIÁ VÉ - BẠN CẦN LẤY DỮ LIỆU NÀY TỪ API CỦA CHUYẾN ĐI
+  // GIẢ ĐỊNH GIÁ VÉ - bạn có thể thay bằng giá thực tế từ API chuyến đi
   final double giaVe = 200000;
 
   @override
@@ -35,20 +35,31 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
   String _vnd(num n) =>
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);
 
-  // === SỬA LẠI HÀM XỬ LÝ KHI NHẤN NÚT "TIẾP TỤC" ===
-  void _handleContinue() {
-    // Chỉ cần điều hướng và truyền dữ liệu, không cần tạo vé ở đây
+  // ✅ HÀM MỚI: Lấy SĐT từ SharedPreferences và chuyển sang màn TripCustomerInfo
+  Future<void> _handleContinue() async {
+    final userPhone = widget.phone;
+
+    if (userPhone == null || userPhone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không tìm thấy số điện thoại người dùng!')),
+      );
+      return;
+    }
+
+    print('📱 [TripInfoScreen] Truyền SDT qua TripCustomerInfo: $userPhone');
+
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TripCustomerInfoScreen(
           chuyenId: widget.chuyenId,
           gia: giaVe,
-          // phone: "0987654321", // Nếu bạn có sđt của người dùng đang đăng nhập, hãy truyền vào đây
+          phone: userPhone, // ✅ truyền đúng dữ liệu nhận được từ Login
         ),
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -100,11 +111,16 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                         backgroundColor: Colors.blueAccent,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 100), // Khoảng trống
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -154,11 +170,17 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber,
               foregroundColor: Colors.black87,
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              padding:
+              const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-            onPressed: _handleContinue, // SỬA: Gọi hàm điều hướng mới
+            onPressed: _handleContinue, // ✅ Sửa: dùng hàm mới
             child: const Text('Tiếp tục'),
           ),
         ],
@@ -166,8 +188,6 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
     );
   }
 
-  // --- Các widget _buildTripInfoCard, _buildVehicleInfoCard, _infoRow giữ nguyên ---
-  // ... (Bạn có thể copy lại các widget này từ code cũ của bạn)
   Widget _buildTripInfoCard(Chuyen chuyen) {
     return Card(
       elevation: 2,
@@ -179,10 +199,14 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
           children: [
             Text(
               chuyen.chuyenName,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineSmall
+                  ?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _infoRow(Icons.event_available_outlined, 'Khởi hành', _formatDateTime(chuyen.ngayGio)),
+            _infoRow(Icons.event_available_outlined, 'Khởi hành',
+                _formatDateTime(chuyen.ngayGio)),
             const Divider(height: 20),
             _infoRow(Icons.route_outlined, 'Tuyến đường', chuyen.tuyenDuongName),
             const SizedBox(height: 8),
@@ -212,7 +236,8 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Thông tin phương tiện', style: Theme.of(context).textTheme.titleLarge),
+            Text('Thông tin phương tiện',
+                style: Theme.of(context).textTheme.titleLarge),
             const Divider(height: 20),
             _infoRow(Icons.directions_bus_outlined, 'Loại xe', chuyen.loaiXeName),
             _infoRow(Icons.pin_outlined, 'Biển số', chuyen.bienSo),
@@ -223,7 +248,8 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
     );
   }
 
-  Widget _infoRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _infoRow(IconData icon, String label, String value,
+      {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6.0),
       child: Row(
@@ -231,7 +257,8 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
         children: [
           Icon(icon, color: Colors.grey.shade600, size: 22),
           const SizedBox(width: 16),
-          Text('$label:', style: TextStyle(fontSize: 15, color: Colors.grey.shade800)),
+          Text('$label:',
+              style: TextStyle(fontSize: 15, color: Colors.grey.shade800)),
           const SizedBox(width: 8),
           Expanded(
             child: Text(

@@ -2,17 +2,14 @@
 import '../config/api.dart';
 
 class VeService {
-  /// Hàm tạo một vé mới.
-  /// Trả về ID của vé vừa được tạo.
   static Future<int> createVe({
     required int chuyenId,
     required int khachHangId,
     required double giaVe,
   }) async {
     try {
-      print('--- [VeService] Đang tạo vé...');
+      print("--- [VeService] Đang chuẩn bị tạo vé với dữ liệu: ChuyenID=$chuyenId, KhachHangID=$khachHangId, Gia=$giaVe ---");
 
-      // SỬA: Bỏ dấu '?' để đảm bảo veData không bao giờ là null
       final Map<String, dynamic> veData = {
         'Ve_gia': giaVe,
         'NgayTao': DateTime.now().toIso8601String(),
@@ -21,16 +18,20 @@ class VeService {
         'Chuyen_id': chuyenId,
       };
 
-      // SỬA: Loại bỏ nhãn 'data:' để khớp với định nghĩa Api.post
-      final response = await Api.post('/ve/create', veData);
+      // === SỬA LỖI Ở ĐÂY ===
+      // Endpoint đúng của bạn là '/ve', không phải '/ve/create'
+      final response = await Api.post('/ve', veData);
 
-      final int veId = response.data['Ve_id'];
-      print('--- [VeService] Tạo vé thành công với ID: $veId ---');
-      return veId;
-
+      if (response.data != null && response.data['Ve_id'] != null) {
+        final int veId = response.data['Ve_id'];
+        print('--- [VeService] TẠO VÉ THÀNH CÔNG với ID: $veId ---');
+        return veId;
+      } else {
+        print('--- [VeService] Lỗi: Phản hồi từ backend không chứa Ve_id. Data: ${response.data}');
+        throw Exception('Phản hồi từ server không hợp lệ khi tạo vé.');
+      }
     } catch (e) {
-      print('--- [VeService] Lỗi khi tạo vé: $e');
-      // Ném lại lỗi để UI có thể bắt và hiển thị thông báo
+      print('--- [VeService] LỖI NGHIÊM TRỌNG KHI TẠO VÉ: $e ---');
       rethrow;
     }
   }
