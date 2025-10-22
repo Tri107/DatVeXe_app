@@ -10,7 +10,7 @@ class Ve {
   final String khachHangName;
   final String chuyenName;
   final String SDT;
-  final DateTime? ngayGio; // SỬA 1: Cho phép trường này là null
+  final DateTime? ngayGio;
   final String benDi;
   final String benDen;
 
@@ -24,7 +24,7 @@ class Ve {
     required this.khachHangName,
     required this.chuyenName,
     required this.SDT,
-    this.ngayGio, // SỬA 2: Đây là thuộc tính tùy chọn
+    this.ngayGio,
     required this.benDi,
     required this.benDen,
   });
