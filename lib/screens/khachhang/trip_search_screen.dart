@@ -8,12 +8,14 @@ class TripSearchScreen extends StatefulWidget {
   final String from;
   final String to;
   final DateTime? date;
+  final String? phone;
 
   const TripSearchScreen({
     Key? key,
     required this.from,
     required this.to,
     this.date,
+    this.phone,
   }) : super(key: key);
 
   @override
@@ -105,7 +107,7 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => TripInfoScreen(chuyenId: chuyen.chuyenId),
+                        builder: (_) => TripInfoScreen(chuyenId: chuyen.chuyenId, phone: widget.phone),
                       ),
                     );
                   },

@@ -1,4 +1,3 @@
-// lib/screens/khachhang/trip_customer_info_screen.dart
 import 'package:datvexe_app/models/KhachHang.dart';
 import 'package:datvexe_app/screens/khachhang/payment_screen.dart';
 import 'package:datvexe_app/services/Ve_Service.dart';
@@ -9,7 +8,7 @@ import 'package:email_validator/email_validator.dart';
 class TripCustomerInfoScreen extends StatefulWidget {
   final int chuyenId;
   final double gia;
-  final String? phone; // SĐT của người dùng đang đăng nhập
+  final String? phone; // SĐT người dùng đã đăng nhập
 
   const TripCustomerInfoScreen({
     super.key,
@@ -31,7 +30,6 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
   final emailCtrl = TextEditingController();
 
   KhachHang? _loadedCustomer;
-
   bool _isProcessing = false;
   bool _isLoadingData = true;
   bool _hasExistingCustomer = false;
@@ -39,75 +37,97 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
   @override
   void initState() {
     super.initState();
-    String? phoneToLoad = widget.phone;
-
-    // Quan trọng: Phải có SĐT được truyền vào từ màn hình trước thì mới tự động load
-    if (phoneToLoad != null && phoneToLoad.isNotEmpty) {
-      phoneCtrl.text = phoneToLoad;
-      _loadKhachHang(phoneToLoad);
+    if (widget.phone != null && widget.phone!.isNotEmpty) {
+      print('--- [TripCustomerInfo] Nhận SĐT từ login: ${widget.phone} ---');
+      phoneCtrl.text = widget.phone!;
+      _loadKhachHang(widget.phone!);
     } else {
-      // Nếu không có SĐT, không làm gì cả và hiển thị màn hình nhập mới
-      setState(() {
-        _isLoadingData = false;
-      });
+      print('[TripCustomerInfo] ⚠️ Không nhận được SĐT từ widget.phone');
+      _isLoadingData = false;
     }
   }
 
+  /// 🔍 Lấy thông tin khách hàng theo SDT
   Future<void> _loadKhachHang(String phone) async {
-    final kh = await _khService.getKhachHangByPhone(phone);
-    if (mounted) {
+    print('--- [TripCustomerInfo] Gọi API lấy khách hàng theo SĐT: $phone ---');
+
+    try {
+      final kh = await _khService.getKhachHangByPhone(phone);
+
+      if (!mounted) return;
+
       setState(() {
         if (kh != null) {
-          // Nếu tìm thấy khách hàng, đổ dữ liệu vào UI
+          // Có dữ liệu khách hàng → đổ lên form
           nameCtrl.text = kh.khachHangName;
           emailCtrl.text = kh.email;
+          phoneCtrl.text = kh.sdt;
+
+          _loadedCustomer = kh;
           _hasExistingCustomer = true;
-          _loadedCustomer = kh; // Lưu lại khách hàng để quyết định update
+
+          print('[TripCustomerInfo] ✅ Đã load dữ liệu khách hàng thành công!');
         } else {
-          // Nếu không tìm thấy, UI sẽ là các ô trống để nhập mới
-          _hasExistingCustomer = false;
+          // Không có → cho nhập mới
           _loadedCustomer = null;
+          _hasExistingCustomer = false;
+          print('[TripCustomerInfo] ⚠️ Không tìm thấy khách hàng với SĐT: $phone');
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Không tìm thấy khách hàng với số $phone')),
+          );
         }
-        _isLoadingData = false; // Hoàn tất loading
+        _isLoadingData = false;
       });
+    } catch (e) {
+      print('[TripCustomerInfo] ❌ Lỗi khi load khách hàng: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Lỗi khi lấy thông tin khách hàng: $e')),
+        );
+      }
+      setState(() => _isLoadingData = false);
     }
   }
 
-  Future<KhachHang> _processCustomerInfo() {
-    // Dựa vào việc `_loadedCustomer` có tồn tại hay không để quyết định
+  /// 📦 Xử lý create / update khách hàng
+  Future<KhachHang> _processCustomerInfo() async {
     if (_loadedCustomer != null) {
-      // NẾU CÓ: Gọi hàm UPDATE.
-      print("--- Logic: Khách hàng đã tồn tại. Sẽ gọi hàm UPDATE. ---");
-      return _khService.updateKhachHang(
+      print("--- [TripCustomerInfo] Update Khách Hàng ID: ${_loadedCustomer!.khachHangId}");
+      return await _khService.updateKhachHang(
         customerId: _loadedCustomer!.khachHangId,
-        name: nameCtrl.text, // Lấy giá trị mới từ ô nhập liệu
-        phone: phoneCtrl.text,
-        email: emailCtrl.text,
+        name: nameCtrl.text.trim(),
+        phone: phoneCtrl.text.trim(),
+        email: emailCtrl.text.trim(),
       );
     } else {
-      // NẾU KHÔNG CÓ: Gọi hàm CREATE.
-      print("--- Logic: Khách hàng chưa tồn tại. Sẽ gọi hàm CREATE. ---");
-      return _khService.createKhachHang(
-        name: nameCtrl.text,
-        phone: phoneCtrl.text,
-        email: emailCtrl.text,
+      print("--- [TripCustomerInfo] Create Khách Hàng Mới ---");
+      return await _khService.createKhachHang(
+        name: nameCtrl.text.trim(),
+        phone: phoneCtrl.text.trim(),
+        email: emailCtrl.text.trim(),
       );
     }
   }
 
+  /// 💳 Lưu thông tin và chuyển sang màn hình thanh toán
   Future<void> _handleConfirmAndContinue() async {
-    if (!_formKey.currentState!.validate() || _isProcessing) {
-      return;
-    }
-    setState(() { _isProcessing = true; });
+    if (!_formKey.currentState!.validate() || _isProcessing) return;
+
+    setState(() => _isProcessing = true);
 
     try {
       final KhachHang customer = await _processCustomerInfo();
+
+      print("[TripCustomerInfo] ✅ Xử lý xong khách hàng: ${customer.khachHangId}");
+
       final int veId = await VeService.createVe(
         chuyenId: widget.chuyenId,
         khachHangId: customer.khachHangId,
         giaVe: widget.gia,
       );
+
+      print("[TripCustomerInfo] 🎫 Vé được tạo với ID: $veId");
 
       if (mounted) {
         Navigator.of(context).pushReplacement(
@@ -121,9 +141,7 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
         );
       }
     } finally {
-      if (mounted) {
-        setState(() { _isProcessing = false; });
-      }
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
@@ -149,9 +167,14 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
                 _hasExistingCustomer
                     ? "Vui lòng xác nhận thông tin của bạn"
                     : "Vui lòng nhập thông tin hành khách",
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
               const SizedBox(height: 16),
+
+              /// --- TÊN KHÁCH HÀNG ---
               TextFormField(
                 controller: nameCtrl,
                 decoration: const InputDecoration(
@@ -159,9 +182,14 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.person_outline),
                 ),
-                validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập tên' : null,
+                validator: (value) =>
+                (value == null || value.isEmpty)
+                    ? 'Vui lòng nhập tên'
+                    : null,
               ),
               const SizedBox(height: 16),
+
+              /// --- SỐ ĐIỆN THOẠI ---
               TextFormField(
                 controller: phoneCtrl,
                 decoration: const InputDecoration(
@@ -169,10 +197,16 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
+                readOnly: _hasExistingCustomer, // Khóa nếu đã login sẵn
                 keyboardType: TextInputType.phone,
-                validator: (value) => (value == null || value.isEmpty) ? 'Vui lòng nhập số điện thoại' : null,
+                validator: (value) =>
+                (value == null || value.isEmpty)
+                    ? 'Vui lòng nhập số điện thoại'
+                    : null,
               ),
               const SizedBox(height: 16),
+
+              /// --- EMAIL ---
               TextFormField(
                 controller: emailCtrl,
                 decoration: const InputDecoration(
@@ -188,18 +222,28 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
                 },
               ),
               const SizedBox(height: 24),
+
+              /// --- NÚT XÁC NHẬN ---
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black87,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  backgroundColor: Colors.amber,
+                  foregroundColor: Colors.black87,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
                 onPressed: _isProcessing ? null : _handleConfirmAndContinue,
                 child: _isProcessing
                     ? const CircularProgressIndicator(color: Colors.black54)
                     : Text(
-                  _hasExistingCustomer ? "Xác nhận & Tiếp tục" : "Lưu & Tiếp tục",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  _hasExistingCustomer
+                      ? "Xác nhận & Tiếp tục"
+                      : "Lưu & Tiếp tục",
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
