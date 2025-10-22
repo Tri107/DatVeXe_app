@@ -1,10 +1,18 @@
+// lib/models/Ve.dart
+
 class Ve {
   final int veId;
   final double veGia;
-  final DateTime ngayTao;
+  final String ngayTao;
   final String ghiChu;
   final int khachHangId;
   final int chuyenId;
+  final String khachHangName;
+  final String chuyenName;
+  final String SDT;
+  final DateTime? ngayGio; // SỬA 1: Cho phép trường này là null
+  final String benDi;
+  final String benDen;
 
   Ve({
     required this.veId,
@@ -13,35 +21,43 @@ class Ve {
     required this.ghiChu,
     required this.khachHangId,
     required this.chuyenId,
+    required this.khachHangName,
+    required this.chuyenName,
+    required this.SDT,
+    this.ngayGio, // SỬA 2: Đây là thuộc tính tùy chọn
+    required this.benDi,
+    required this.benDen,
   });
 
   factory Ve.fromJson(Map<String, dynamic> json) {
+    num giaVeParsed = 0;
+    if (json['Ve_gia'] is String) {
+      giaVeParsed = num.tryParse(json['Ve_gia']) ?? 0;
+    } else if (json['Ve_gia'] is num) {
+      giaVeParsed = json['Ve_gia'];
+    }
+
+    DateTime? ngayGioParsed;
+    if (json['NgayGio'] != null && json['NgayGio'] is String) {
+      ngayGioParsed = DateTime.tryParse(json['NgayGio']);
+    }
+
     return Ve(
-      veId: json['Ve_id'] is int
-          ? json['Ve_id']
-          : int.tryParse(json['Ve_id'].toString()) ?? 0,
-      veGia: json['Ve_gia'] is num
-          ? (json['Ve_gia'] as num).toDouble()
-          : double.tryParse(json['Ve_gia'].toString()) ?? 0.0,
-      ngayTao: json['NgayTao'] != null && json['NgayTao'] != ''
-          ? DateTime.parse(json['NgayTao'])
-          : DateTime(2000, 1, 1),
-      ghiChu: json['GhiChu'] ?? '',
-      khachHangId: json['KhachHang_id'] is int
-          ? json['KhachHang_id']
-          : int.tryParse(json['KhachHang_id'].toString()) ?? 0,
-      chuyenId: json['Chuyen_id'] is int
-          ? json['Chuyen_id']
-          : int.tryParse(json['Chuyen_id'].toString()) ?? 0,
+      veId: json['Ve_id'] as int? ?? 0,
+      veGia: giaVeParsed.toDouble(),
+      ngayTao: json['NgayTao'] as String? ?? '',
+      ghiChu: json['GhiChu'] as String? ?? '',
+      khachHangId: json['KhachHang_id'] as int? ?? 0,
+      chuyenId: json['Chuyen_id'] as int? ?? 0,
+      khachHangName: json['KhachHang_name'] as String? ?? 'N/A',
+      chuyenName: json['Chuyen_name'] as String? ?? 'N/A',
+      SDT: json['SDT'] as String? ?? 'N/A',
+
+      // SỬA 3: Chỉ cần gán giá trị đã parse, không cần giá trị mặc định
+      ngayGio: ngayGioParsed,
+
+      benDi: json['BenDi'] as String? ?? 'N/A',
+      benDen: json['BenDen'] as String? ?? 'N/A',
     );
   }
-
-  Map<String, dynamic> toJson() => {
-    'Ve_id': veId,
-    'Ve_gia': veGia,
-    'NgayTao': ngayTao.toIso8601String(),
-    'GhiChu': ghiChu,
-    'KhachHang_id': khachHangId,
-    'Chuyen_id': chuyenId,
-  };
 }

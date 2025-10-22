@@ -1,41 +1,60 @@
-// lib/services/khachhang_service.dart
 import 'package:datvexe_app/config/api.dart';
 import 'package:datvexe_app/models/KhachHang.dart';
 
 class KhachHangService {
-  /// Lấy thông tin khách hàng bằng SĐT.
-  /// Trả về null nếu không tìm thấy hoặc có lỗi.
+  /// 🔍 Lấy thông tin khách hàng bằng SĐT.
+  /// In log chi tiết nếu có lỗi hoặc không trả về dữ liệu.
   Future<KhachHang?> getKhachHangByPhone(String phone) async {
+    print('--- [KhachHangService] Gọi API: /khachhang/find-by-phone/$phone');
+
     try {
-      final response = await Api.get('/khachhang/phone/$phone');
-      if (response.data != null && response.data is Map<String, dynamic>) {
-        return KhachHang.fromJson(response.data);
+      final response = await Api.get('/khachhang/find-by-phone/$phone');
+      print('[KhachHangService] 📥 Response status: ${response.statusCode}');
+      print('[KhachHangService] 📦 Raw data: ${response.data}');
+
+      final data = response.data;
+
+      if (data == null) {
+        print('[KhachHangService] ⚠️ Response.data = null');
+        return null;
       }
-      return null;
+
+      // ✅ Vì backend trả object trực tiếp nên chỉ cần parse luôn
+      if (data is Map<String, dynamic>) {
+        print('[KhachHangService] ✅ Tìm thấy khách hàng: ${data}');
+        return KhachHang.fromJson(data);
+      } else {
+        print('[KhachHangService] ❌ Response không phải Map<String, dynamic>: ${data.runtimeType}');
+        return null;
+      }
     } catch (e) {
-      print("[KhachHangService] Lỗi khi lấy khách hàng: $e");
+      print('[KhachHangService] ❌ Lỗi khi lấy khách hàng: $e');
       return null;
     }
   }
 
-  /// Gọi API để tạo một khách hàng mới.
+  /// 🧩 Tạo khách hàng mới
   Future<KhachHang> createKhachHang({
     required String name,
     required String phone,
     required String email,
   }) async {
     try {
-      print('--- [KhachHangService] Đang tạo khách hàng mới...');
+      print('--- [KhachHangService] Gọi API tạo khách hàng mới ---');
       final customerData = {'KhachHang_name': name, 'SDT': phone, 'email': email};
+      print('[KhachHangService] 📤 Body gửi lên: $customerData');
+
       final response = await Api.post('/khachhang', customerData);
+      print('[KhachHangService] 📥 Response khi tạo: ${response.data}');
+
       return KhachHang.fromJson(response.data);
     } catch (e) {
-      print('--- [KhachHangService] Lỗi khi tạo khách hàng: $e');
+      print('[KhachHangService] ❌ Lỗi khi tạo khách hàng: $e');
       rethrow;
     }
   }
 
-  /// Gọi API để cập nhật thông tin cho một khách hàng đã có.
+  /// 🛠️ Cập nhật thông tin khách hàng
   Future<KhachHang> updateKhachHang({
     required int customerId,
     required String name,
@@ -43,12 +62,16 @@ class KhachHangService {
     required String email,
   }) async {
     try {
-      print('--- [KhachHangService] Đang cập nhật cho khách hàng ID: $customerId...');
+      print('--- [KhachHangService] Gọi API cập nhật khách hàng ID: $customerId ---');
       final customerData = {'KhachHang_name': name, 'SDT': phone, 'email': email};
+      print('[KhachHangService] 📤 Body gửi lên: $customerData');
+
       final response = await Api.put('/khachhang/$customerId', customerData);
+      print('[KhachHangService] 📥 Response khi cập nhật: ${response.data}');
+
       return KhachHang.fromJson(response.data);
     } catch (e) {
-      print('--- [KhachHangService] Lỗi khi cập nhật khách hàng: $e');
+      print('[KhachHangService] ❌ Lỗi khi cập nhật khách hàng: $e');
       rethrow;
     }
   }
