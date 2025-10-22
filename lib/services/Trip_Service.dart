@@ -60,4 +60,17 @@ class ChuyenService {
       rethrow;
     }
   }
+  static Future<Chuyen> fetchTripById(int chuyenId) async {
+    try {
+      print('--- [TripService] Bắt đầu gọi API lấy chuyến ID: $chuyenId ---');
+      final response = await Api.get('/chuyen/$chuyenId');
+      print('--- [TripService] Lấy dữ liệu thành công cho chuyến ID: $chuyenId ---');
+      return Chuyen.fromJson(response.data);
+    } catch (e) {
+      print('--- [TripService] Lỗi khi lấy chi tiết chuyến ID: $chuyenId ---');
+      print(e);
+      // Ném lại lỗi để FutureBuilder có thể xử lý
+      throw Exception('Không thể tải chi tiết chuyến đi. Lỗi: $e');
+    }
+  }
 }
