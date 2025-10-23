@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:datvexe_app/screens/common/splash_screen.dart';
 import 'package:datvexe_app/screens/khachhang/home_screen.dart';
+import 'package:datvexe_app/screens/khachhang/payment_successful.dart';
 import 'package:datvexe_app/screens/taixe/taixe_home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,49 +11,114 @@ import 'package:datvexe_app/screens/auth/login_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:datvexe_app/models/TaiKhoan.dart';
+import 'package:app_links/app_links.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await dotenv.load(fileName: ".env");
   await Api.loadToken();
 
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
-  /// Kiểm tra token và trả về user (nếu có)
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  // ✅ Thêm GlobalKey để điều hướng global
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  late final AppLinks _appLinks;
+  StreamSubscription<Uri>? _linkSub;
+  TaiKhoan? _user;
+  bool _isLoading = true;
+  Uri? _initialDeepLink;
+
+  @override
+  void initState() {
+    super.initState();
+    _initApp();
+    _initDeepLinks();
+  }
+
+  /// ✅ Load user từ token
+  Future<void> _initApp() async {
+    _user = await _getUserFromToken();
+    setState(() => _isLoading = false);
+  }
+
+  /// ✅ Giải mã token trong SharedPreferences
   Future<TaiKhoan?> _getUserFromToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
-    print('🔍 Kiểm tra token trong SharedPreferences: $token');
+    debugPrint('🔍 Token SharedPreferences: $token');
 
     if (token != null && token.isNotEmpty) {
-      // Gắn lại token vào header cho API
       await Api.setToken(token);
-
       try {
-        // Giải mã token để lấy payload
-        Map<String, dynamic> decoded = JwtDecoder.decode(token);
-        print('🧩 Payload token: $decoded');
-
+        final decoded = JwtDecoder.decode(token);
+        debugPrint('🧩 Payload token: $decoded');
         return TaiKhoan(
           sdt: decoded['sdt'] ?? '',
           role: decoded['role'] ?? 'user',
         );
       } catch (e) {
-        print('⚠️ Lỗi giải mã token: $e');
-        return null;
+        debugPrint('⚠️ Lỗi giải mã token: $e');
       }
     }
     return null;
   }
 
+  /// 🔹 Bắt deep link VNPay redirect
+  Future<void> _initDeepLinks() async {
+    _appLinks = AppLinks();
+
+    // 🔸 Khi app đang mở (foreground)
+    _linkSub = _appLinks.uriLinkStream.listen((uri) {
+      if (uri == null) return;
+      debugPrint('🔗 Nhận deep link realtime: $uri');
+      _handleDeepLink(uri);
+    });
+
+    // 🔸 Khi app mở từ deep link (launch)
+    final uri = await _appLinks.getInitialLink();
+    if (uri != null) {
+      debugPrint('🚀 Deep link khi mở app: $uri');
+      setState(() {
+        _initialDeepLink = uri;
+      });
+    }
+  }
+
+  /// ✅ Xử lý deep link với navigatorKey
+  void _handleDeepLink(Uri uri) {
+    if (uri.scheme == 'datvexe' && uri.host == 'payment-success') {
+      debugPrint('🎯 Điều hướng đến PaymentSuccessful');
+
+      // Đảm bảo Navigator đã sẵn sàng
+      Future.delayed(const Duration(milliseconds: 200), () {
+        _navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const PaymentSuccessful()),
+              (_) => false,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey, // ✅ Gắn navigatorKey vào MaterialApp
       debugShowCheckedModeBanner: false,
       title: 'Đặt vé xe',
       theme: ThemeData(primarySwatch: Colors.blue),
@@ -62,35 +129,25 @@ class MyApp extends StatelessWidget {
       ],
       supportedLocales: const [Locale('vi', 'VN')],
       locale: const Locale('vi', 'VN'),
-
-      home: FutureBuilder<TaiKhoan?>(
-        future: _getUserFromToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const SplashScreen();
+      home: Builder(
+        builder: (context) {
+          // 🔹 Nếu deep link tồn tại → vào PaymentSuccessful luôn
+          if (_initialDeepLink != null &&
+              _initialDeepLink!.scheme == 'datvexe' &&
+              _initialDeepLink!.host == 'payment-success') {
+            return const PaymentSuccessful();
           }
 
-          if (snapshot.hasError) {
-            print('❌ Lỗi khi đọc token: ${snapshot.error}');
-            return const LoginScreen();
+          // 🔹 Bình thường → hiển thị app như cũ
+          if (_isLoading) return const SplashScreen();
+
+          if (_user != null) {
+            return _user!.role == 'taixe'
+                ? TaiXeHomeScreen(user: _user!)
+                : HomeScreen(user: _user!);
           }
 
-          if (snapshot.data != null) {
-            final user = snapshot.data!;
-            print('✅ Token hợp lệ, vai trò: ${user.role}');
-
-            // 🔀 Chuyển hướng theo role
-            if (user.role == 'taixe') {
-              print('🚗 Vào giao diện Tài xế');
-              return TaiXeHomeScreen(user: user);
-            } else {
-              print('🏠 Vào giao diện Khách hàng');
-              return HomeScreen(user: user);
-            }
-          } else {
-            print('⚪ Không có token hoặc token không hợp lệ, vào LoginScreen');
-            return const LoginScreen();
-          }
+          return const LoginScreen();
         },
       ),
     );
