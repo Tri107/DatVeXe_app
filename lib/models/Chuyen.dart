@@ -11,6 +11,8 @@ class Chuyen {
   final String loaiXeName;
   final String bienSo;
   final String taiXeName;
+  final String benDiName;
+  final String benDenName;
 
   Chuyen({
     required this.chuyenId,
@@ -23,6 +25,8 @@ class Chuyen {
     required this.loaiXeName,
     required this.bienSo,
     required this.taiXeName,
+    required this.benDiName,
+    required this.benDenName,
   });
 
   factory Chuyen.fromJson(Map<String, dynamic> json) {
@@ -31,14 +35,16 @@ class Chuyen {
     return Chuyen(
       chuyenId: json['Chuyen_id'],
       chuyenName: json['Chuyen_name'] ?? 'Không có tên',
-      tuyenDuongName: json['TuyenDuong_name'] ?? 'Không rõ', // Lỗi có thể ở đây
-      diemDi: json['DiemDi'] ?? 'Không rõ',                   // hoặc ở đây
-      diemDen: json['DiemDen'] ?? 'Không rõ',                 // hoặc ở đây
+      tuyenDuongName: json['TuyenDuong_name'] ?? 'Không rõ',
+      diemDi: json['DiemDi'] ?? 'Không rõ',
+      diemDen: json['DiemDen'] ?? 'Không rõ',
       tinhTrang: json['Tinh_Trang'] ?? 'Không rõ',
       ngayGio: DateTime.parse(json['Ngay_gio']),
       loaiXeName: json['LoaiXe_name'] ?? 'Không rõ',
       bienSo: json['Bien_so'] ?? 'Không rõ',
       taiXeName: json['TaiXe_name'] ?? 'Không rõ',
+      benDiName: json['Ben_di_name'] ?? 'Không rõ',
+      benDenName: json['Ben_den_name'] ?? 'Không rõ',
     );
   }
 }
