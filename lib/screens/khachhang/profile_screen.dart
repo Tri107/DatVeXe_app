@@ -44,26 +44,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final phone = currentUser.sdt;
       print('[ProfileScreen] 🔍 Lấy thông tin theo SĐT: $phone');
 
+      // ✅ Luôn hiển thị SĐT ngay cả khi chưa có trong bảng khachhang
+      setState(() {
+        _phoneCtrl.text = phone;
+      });
+
       final khachHang = await KhachHangService.getKhachHangByPhone(phone);
       if (khachHang == null) {
-        print('[ProfileScreen] ⚠️ Không tìm thấy khách hàng theo SĐT');
+        print('[ProfileScreen] ⚠️ Không tìm thấy khách hàng theo SĐT → Cho phép nhập mới');
+        setState(() => _isLoading = false);
         return;
       }
 
       setState(() {
         _currentCustomer = khachHang;
         _nameCtrl.text = khachHang.khachHangName;
-        _phoneCtrl.text = khachHang.sdt;
         _emailCtrl.text = khachHang.email;
+        _isLoading = false;
       });
 
-      print('[ProfileScreen] ✅ Dữ liệu đã load xong');
+      print('[ProfileScreen] ✅ Dữ liệu khách hàng đã load xong');
     } catch (e) {
       print('[ProfileScreen] ❌ Lỗi khi tải thông tin: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Lỗi tải thông tin: $e")),
       );
-    } finally {
       setState(() => _isLoading = false);
     }
   }
@@ -78,16 +83,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  /// 🔹 Lưu cập nhật thông tin khách hàng
+  /// 🔹 Tạo hoặc cập nhật thông tin khách hàng
   Future<void> _saveProfile() async {
     try {
-      if (_currentCustomer == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Không có thông tin khách hàng để cập nhật")),
-        );
-        return;
-      }
-
       final name = _nameCtrl.text.trim();
       final phone = _phoneCtrl.text.trim();
       final email = _emailCtrl.text.trim();
@@ -101,31 +99,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       setState(() => _isLoading = true);
 
-      final updated = await KhachHangService.updateKhachHang(
-        customerId: _currentCustomer!.khachHangId,
-        name: name,
-        phone: phone,
-        email: email,
-      );
+      final existingCustomer = await KhachHangService.getKhachHangByPhone(phone);
 
-      setState(() {
-        _currentCustomer = updated;
-        _nameCtrl.text = updated.khachHangName;
-        _emailCtrl.text = updated.email;
-        _isLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Cập nhật thông tin thành công 🎉"),
-          backgroundColor: Colors.green,
-        ),
-      );
+      if (existingCustomer == null) {
+        // ✅ Nếu chưa có → tạo mới
+        print("[ProfileScreen] 🟢 Chưa có khách hàng → tạo mới");
+        final newCustomer = await KhachHangService.createKhachHang(
+          name: name,
+          phone: phone,
+          email: email,
+        );
+        setState(() {
+          _currentCustomer = newCustomer;
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Tạo mới thông tin khách hàng thành công 🎉"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        // ✅ Nếu có → cập nhật
+        print("[ProfileScreen] 🟡 Đã có khách hàng → cập nhật");
+        final updated = await KhachHangService.updateKhachHang(
+          customerId: existingCustomer.khachHangId,
+          name: name,
+          phone: phone,
+          email: email,
+        );
+        setState(() {
+          _currentCustomer = updated;
+          _nameCtrl.text = updated.khachHangName;
+          _emailCtrl.text = updated.email;
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Cập nhật thông tin thành công 🎉"),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      print('[ProfileScreen] ❌ Lỗi cập nhật: $e');
+      print('[ProfileScreen] ❌ Lỗi khi lưu thông tin: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Lỗi khi cập nhật: $e"),
+          content: Text("Lỗi khi lưu thông tin: $e"),
           backgroundColor: Colors.red,
         ),
       );
@@ -176,7 +196,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ],
       ),
-
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -262,7 +281,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
                 ),
-                onPressed: _saveProfile, // ✅ Gọi hàm update
+                onPressed: _saveProfile,
                 child: const Text(
                   "Lưu",
                   style: TextStyle(
@@ -284,7 +303,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required TextEditingController controller,
     TextInputType keyboardType = TextInputType.text,
   }) {
-    final isPhoneField = label.contains("Số điện thoại"); // ✅ xác định trường SĐT
+    final isPhoneField = label.contains("Số điện thoại");
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
