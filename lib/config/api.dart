@@ -31,31 +31,37 @@ class Api {
 
 
   // ---------- Token ----------
+  static String? token;
 
-  static Future<void> setToken(String token) async {
+  static Future<void> setToken(String tokenValue) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('token', token);
-    _dio.options.headers['Authorization'] = 'Bearer $token';
+    await prefs.setString('token', tokenValue);
+    token = tokenValue;
+    _dio.options.headers['Authorization'] = 'Bearer $tokenValue';
   }
-
 
   static Future<void> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('token');
-    if (token != null) {
-      _dio.options.headers['Authorization'] = 'Bearer $token';
+    final savedToken = prefs.getString('token');
+
+    if (savedToken != null && savedToken.isNotEmpty) {
+      token = savedToken;
+      _dio.options.headers['Authorization'] = 'Bearer $savedToken';
+      print('🔵 Token đã load lại từ SharedPreferences: $savedToken');
+    } else {
+      print('⚪ Không tìm thấy token trong SharedPreferences khi load');
     }
   }
-
 
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
+
+    token = null;
     _dio.options.headers.remove('Authorization');
   }
+
   static String _p(String path) => path.startsWith('/') ? path : '/$path';
-
-
 
   // ---------- Low-level ----------
   static Future<Response> get(String path, {Map<String, dynamic>? query}) =>
@@ -78,7 +84,6 @@ class Api {
     return r.data;
   }
 
-
   static Future<dynamic> postJson(String path, dynamic data) async {
     final r = await post(path, data);
     _throwIfClientError(r);
@@ -97,7 +102,6 @@ class Api {
       );
     }
   }
-
 
   // ---------- Format lỗi đẹp ----------
   static String handleError(DioException e) {
