@@ -1,5 +1,6 @@
 import 'package:datvexe_app/screens/khachhang/trip_search_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/TaiKhoan.dart';
 import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
@@ -26,13 +27,15 @@ class _HomeScreenState extends State<HomeScreen> {
   List<TinhThanhPho> _tinhThanhList = [];
   String? _fromSelected;
   String? _toSelected;
-
   final _tinhThanhService = TinhThanhPhoService();
+  /// 🔹 Danh sách tìm kiếm gần đây (lưu trong SharedPreferences)
+  List<Map<String, dynamic>> _recentSearches = [];
 
   @override
   void initState() {
     super.initState();
     _loadTinhThanhPho();
+    _loadRecentSearches();
   }
 
   /// Lấy danh sách tỉnh/thành phố từ API
@@ -40,7 +43,6 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final list = await _tinhThanhService.getAll();
 
-      // 🔸 Lọc trùng theo tên (phòng trường hợp API trả về trùng)
       final distinctList = list.fold<List<TinhThanhPho>>([], (acc, e) {
         if (!acc.any((x) => x.tinhThanhPhoName == e.tinhThanhPhoName)) {
           acc.add(e);
@@ -51,7 +53,6 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _tinhThanhList = distinctList;
-          // Chọn mặc định 2 tỉnh đầu tiên (nếu có)
           if (_tinhThanhList.isNotEmpty) {
             _fromSelected = _tinhThanhList.first.tinhThanhPhoName;
             _toSelected = _tinhThanhList.length > 1
@@ -65,7 +66,46 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  ///  Chọn ngày đi
+  /// 🔹 Lưu lịch sử tìm kiếm vào SharedPreferences
+  Future<void> _saveRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final listAsString =
+    _recentSearches.map((item) => item.toString()).toList();
+    await prefs.setStringList('recent_searches', listAsString);
+  }
+
+  /// 🔹 Đọc lịch sử tìm kiếm và lọc theo thời gian (7 ngày gần nhất)
+  Future<void> _loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    final listAsString = prefs.getStringList('recent_searches');
+    if (listAsString == null) return;
+
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> restored = [];
+
+    for (final str in listAsString) {
+      final cleaned = str
+          .substring(1, str.length - 1)
+          .split(', ')
+          .map((e) => e.split(':'))
+          .where((pair) => pair.length == 2)
+          .map((pair) => MapEntry(pair[0].trim(), pair[1].trim()))
+          .toList();
+
+      final map = {for (var e in cleaned) e.key: e.value};
+      if (map.containsKey('timestamp')) {
+        final time = DateTime.tryParse(map['timestamp'] ?? '');
+        if (time != null &&
+            now.difference(time).inDays <= 7) { // ✅ chỉ lấy trong 7 ngày
+          restored.add(map);
+        }
+      }
+    }
+
+    setState(() => _recentSearches = restored);
+  }
+
+  /// 🔹 Khi chọn ngày đi
   Future<void> _chonNgayDi(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -94,6 +134,53 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// 🔹 Khi nhấn nút Tìm kiếm
+  void _onSearch() async {
+    if (_fromSelected == null || _toSelected == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vui lòng chọn điểm đi và điểm đến!")),
+      );
+      return;
+    }
+
+    final search = {
+      'from': _fromSelected!,
+      'to': _toSelected!,
+      'date': _selectedDate != null
+          ? "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}"
+          : "Không chọn ngày",
+      'timestamp': DateTime.now().toIso8601String(), // ✅ ghi lại thời điểm
+    };
+
+    setState(() {
+      // Thêm tìm kiếm mới vào đầu danh sách
+      _recentSearches.insert(0, search);
+
+      // Lọc lại — chỉ giữ 7 ngày gần nhất
+      final now = DateTime.now();
+      _recentSearches = _recentSearches
+          .where((e) {
+        final time = DateTime.tryParse(e['timestamp']);
+        return time != null && now.difference(time).inDays <= 7;
+      })
+          .toList();
+    });
+
+    await _saveRecentSearches(); // ✅ lưu xuống local
+
+    // Chuyển sang trang tìm chuyến
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TripSearchScreen(
+          from: _fromSelected!,
+          to: _toSelected!,
+          date: _selectedDate,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,8 +189,7 @@ class _HomeScreenState extends State<HomeScreen> {
         preferredSize: const Size.fromHeight(60),
         child: Container(
           color: const Color(0xFF1565C0),
-          padding:
-          const EdgeInsets.only(top: 35, left: 16, right: 16, bottom: 10),
+          padding: const EdgeInsets.only(top: 35, left: 16, right: 16, bottom: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -111,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(Icons.directions_bus, color: Colors.white, size: 26),
                 SizedBox(width: 6),
                 Text(
-                  "VeXeSmart",
+                  "VeXeRom",
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -140,7 +226,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // Nội dung chính
       body: _tinhThanhList.isEmpty
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -158,10 +243,9 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            //Form tìm kiếm
+            // Form tìm kiếm
             Container(
-              margin: const EdgeInsets.symmetric(
-                  horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -210,7 +294,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const Divider(),
 
-                  // Chọn ngày đi
                   GestureDetector(
                     onTap: () => _chonNgayDi(context),
                     child: Container(
@@ -247,27 +330,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8)),
                     ),
-                    onPressed: () {
-                      if (_fromSelected == null || _toSelected == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Vui lòng chọn điểm đi và điểm đến!")),
-                        );
-                        return;
-                      }
-
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => TripSearchScreen(
-                            from: _fromSelected!,
-                            to: _toSelected!,
-                            date: _selectedDate, // <-- Cho phép null
-                            phone: widget.user.sdt,
-                          ),
-                        ),
-                      );
-                    },
-
+                    onPressed: _onSearch,
                     child: const Text(
                       "Tìm kiếm",
                       style: TextStyle(
@@ -280,27 +343,26 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            const Padding(
-              padding:
-              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Text("Tìm kiếm gần đây",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: 16)),
-            ),
-            const _RecentSearch(
-                from: "Hồ Chí Minh",
-                to: "Đắk Lắk",
-                date: "CN, 12/10/2025"),
-            const _RecentSearch(
-                from: "Hồ Chí Minh",
-                to: "Đắk Lắk",
-                date: "CN, 05/10/2025"),
+            // 🔹 Hiển thị danh sách tìm kiếm gần đây (nếu có)
+            if (_recentSearches.isNotEmpty) ...[
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text("Tìm kiếm gần đây",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              for (var search in _recentSearches)
+                _RecentSearch(
+                  from: search['from']!,
+                  to: search['to']!,
+                  date: search['date']!,
+                ),
+            ],
             const SizedBox(height: 20),
           ],
         ),
       ),
 
-      //Bottom Navigation
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {

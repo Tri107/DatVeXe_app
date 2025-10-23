@@ -1,16 +1,17 @@
 // lib/screens/khachhang/trip_info_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // ✅ thêm import
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/Chuyen.dart';
 import '../../services/Trip_Service.dart';
+import '../../services/Auth_Services.dart';
 import 'map_screen.dart';
-import 'trip_customer_info_screen.dart'; // ✅ import đúng màn hình
+import 'trip_customer_info_screen.dart';
 
 class TripInfoScreen extends StatefulWidget {
   final int chuyenId;
   final String? phone;
-  const TripInfoScreen({super.key, required this.chuyenId,this.phone});
+  const TripInfoScreen({super.key, required this.chuyenId, this.phone});
 
   @override
   State<TripInfoScreen> createState() => _TripInfoScreenState();
@@ -18,14 +19,39 @@ class TripInfoScreen extends StatefulWidget {
 
 class _TripInfoScreenState extends State<TripInfoScreen> {
   late Future<Chuyen> _futureChuyen;
-
-
+  String? _userPhone;
   final double giaVe = 200000;
 
   @override
   void initState() {
     super.initState();
     _futureChuyen = ChuyenService.fetchTripById(widget.chuyenId);
+    _loadUserInfo(); // ✅ Gọi hàm lấy thông tin đăng nhập
+  }
+
+  /// ✅ Lấy thông tin người dùng đã đăng nhập
+  Future<void> _loadUserInfo() async {
+    try {
+      final user = await AuthService.getCurrentUser(); // lấy từ token
+      if (user != null) {
+        print("✅ [TripInfoScreen] Đã lấy user từ token: ${user.sdt}");
+        setState(() {
+          _userPhone = user.sdt;
+        });
+      } else {
+        // Nếu token không có user, thử lấy từ SharedPreferences (fallback)
+        final prefs = await SharedPreferences.getInstance();
+        final savedPhone = prefs.getString('user_phone');
+        if (savedPhone != null && savedPhone.isNotEmpty) {
+          print("✅ [TripInfoScreen] Đã lấy phone từ SharedPreferences: $savedPhone");
+          setState(() {
+            _userPhone = savedPhone;
+          });
+        }
+      }
+    } catch (e) {
+      print("⚠️ [TripInfoScreen] Lỗi khi load thông tin user: $e");
+    }
   }
 
   String _formatDateTime(DateTime dt) {
@@ -35,9 +61,8 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
   String _vnd(num n) =>
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);
 
-
   Future<void> _handleContinue() async {
-    final userPhone = widget.phone;
+    final userPhone = _userPhone ?? widget.phone;
 
     if (userPhone == null || userPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -59,7 +84,6 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
       ),
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -93,6 +117,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                     const SizedBox(height: 12),
                     _buildVehicleInfoCard(chuyen),
                     const SizedBox(height: 20),
+                    const SizedBox(height: 20),
                     ElevatedButton.icon(
                       onPressed: () {
                         Navigator.push(
@@ -120,7 +145,6 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -171,8 +195,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber,
               foregroundColor: Colors.black87,
-              padding:
-              const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),

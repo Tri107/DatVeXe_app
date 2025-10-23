@@ -3,7 +3,7 @@ import 'package:datvexe_app/models/KhachHang.dart';
 import 'package:datvexe_app/screens/khachhang/payment_screen.dart';
 import 'package:datvexe_app/services/Ve_Service.dart';
 import 'package:flutter/material.dart';
-import 'package:datvexe_app/services/khachhang_service.dart';
+import 'package:datvexe_app/services/KhachHang_Service.dart';
 import 'package:email_validator/email_validator.dart';
 
 class TripCustomerInfoScreen extends StatefulWidget {
@@ -56,7 +56,7 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
   // Hàm này chỉ chạy 1 lần để tải dữ liệu ban đầu
   Future<void> _loadInitialKhachHang(String phone) async {
     print("--- [UI] Đang tải thông tin khách hàng ban đầu với SĐT: $phone ---");
-    final kh = await _khService.getKhachHangByPhone(phone);
+    final kh = await KhachHangService.getKhachHangByPhone(phone);
     if (mounted) {
       setState(() {
         if (kh != null) {
@@ -84,7 +84,7 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
 
     if (_existingCustomerId != null) {
       print("--- [UI Logic] Quyết định: UPDATE vì có `_existingCustomerId` (${_existingCustomerId}) ---");
-      return _khService.updateKhachHang(
+      return KhachHangService.updateKhachHang(
         customerId: _existingCustomerId!, // Dùng ID đã lưu
         name: nameCtrl.text,              // Dùng dữ liệu mới nhất từ UI
         phone: phoneCtrl.text,
@@ -92,7 +92,7 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
       );
     } else {
       print("--- [UI Logic] Quyết định: CREATE vì `_existingCustomerId` là null ---");
-      return _khService.createKhachHang(
+      return KhachHangService.createKhachHang(
         name: nameCtrl.text,
         phone: phoneCtrl.text,
         email: emailCtrl.text,

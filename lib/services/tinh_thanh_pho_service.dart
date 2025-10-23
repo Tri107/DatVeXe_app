@@ -4,14 +4,15 @@ import '../models/TinhThanhPho.dart';
 import '../config/api.dart';
 
 class TinhThanhPhoService {
+  static const String tinhThanhPho = '/TinhThanhPho';
   /// 🔹 Lấy danh sách tất cả Tỉnh/Thành phố
   Future<List<TinhThanhPho>> getAll() async {
     try {
       // Ghép URL gốc và endpoint
       final String baseUrl = Api.client.options.baseUrl;
-      final String endpoint = Api.tinhThanhPho.startsWith('/')
-          ? Api.tinhThanhPho
-          : '/${Api.tinhThanhPho}';
+      final String endpoint = tinhThanhPho.startsWith('/')
+          ? tinhThanhPho
+          : '/$tinhThanhPho';
       final Uri url = Uri.parse('$baseUrl$endpoint');
 
       // Gửi request GET
@@ -49,7 +50,7 @@ class TinhThanhPhoService {
         return distinctList;
       } else {
         throw Exception(
-            'Không thể tải danh sách tỉnh thành (Mã lỗi: ${response.statusCode})');
+            'Không thể tải danh sách tỉnh/thành (Mã lỗi: ${response.statusCode})');
       }
     } catch (e) {
       throw Exception('❌ Lỗi khi tải tỉnh/thành phố: $e');
