@@ -2,9 +2,7 @@ import 'package:datvexe_app/config/api.dart';
 import 'package:datvexe_app/models/KhachHang.dart';
 
 class KhachHangService {
-  /// 🔍 Lấy thông tin khách hàng bằng SĐT.
-  /// In log chi tiết nếu có lỗi hoặc không trả về dữ liệu.
-  Future<KhachHang?> getKhachHangByPhone(String phone) async {
+  static Future<KhachHang?> getKhachHangByPhone(String phone) async {
     print('--- [KhachHangService] Gọi API: /khachhang/find-by-phone/$phone');
 
     try {
@@ -19,12 +17,13 @@ class KhachHangService {
         return null;
       }
 
-      // ✅ Vì backend trả object trực tiếp nên chỉ cần parse luôn
       if (data is Map<String, dynamic>) {
         print('[KhachHangService] ✅ Tìm thấy khách hàng: ${data}');
         return KhachHang.fromJson(data);
       } else {
-        print('[KhachHangService] ❌ Response không phải Map<String, dynamic>: ${data.runtimeType}');
+        print(
+            '[KhachHangService] ❌ Response không phải Map<String, dynamic>: ${data
+                .runtimeType}');
         return null;
       }
     } catch (e) {
@@ -33,15 +32,18 @@ class KhachHangService {
     }
   }
 
-  /// 🧩 Tạo khách hàng mới
-  Future<KhachHang> createKhachHang({
+  static Future<KhachHang> createKhachHang({
     required String name,
     required String phone,
     required String email,
   }) async {
     try {
       print('--- [KhachHangService] Gọi API tạo khách hàng mới ---');
-      final customerData = {'KhachHang_name': name, 'SDT': phone, 'email': email};
+      final customerData = {
+        'KhachHang_name': name,
+        'SDT': phone,
+        'email': email
+      };
       print('[KhachHangService] 📤 Body gửi lên: $customerData');
 
       final response = await Api.post('/khachhang', customerData);
@@ -54,16 +56,20 @@ class KhachHangService {
     }
   }
 
-  /// 🛠️ Cập nhật thông tin khách hàng
-  Future<KhachHang> updateKhachHang({
+  static Future<KhachHang> updateKhachHang({
     required int customerId,
     required String name,
     required String phone,
     required String email,
   }) async {
     try {
-      print('--- [KhachHangService] Gọi API cập nhật khách hàng ID: $customerId ---');
-      final customerData = {'KhachHang_name': name, 'SDT': phone, 'email': email};
+      print(
+          '--- [KhachHangService] Gọi API cập nhật khách hàng ID: $customerId ---');
+      final customerData = {
+        'KhachHang_name': name,
+        'SDT': phone,
+        'email': email
+      };
       print('[KhachHangService] 📤 Body gửi lên: $customerData');
 
       final response = await Api.put('/khachhang/$customerId', customerData);

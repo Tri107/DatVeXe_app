@@ -3,10 +3,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Api {
-  static const String taiKhoan = '/TaiKhoan';
-  static const String tinhThanhPho = '/TinhThanhPho';
-
-
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: dotenv.env['API_BASE_URL'] ??'',

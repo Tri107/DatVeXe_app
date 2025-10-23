@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:jwt_decoder/jwt_decoder.dart';
 import '../config/api.dart';
@@ -8,126 +9,164 @@ class AuthService {
   // 🔹 Gửi OTP
   static Future<bool> sendOtp(String sdt) async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/send-otp");
+    print("📤 [AuthService] Gửi OTP tới: $url với SDT: $sdt");
+
     try {
-      final response = await http.post(
+      final response = await http
+          .post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'SDT': sdt}),
-      );
+      )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        print(' OTP sent successfully');
+        print('✅ [AuthService] Gửi OTP thành công');
         return true;
       } else {
-        print(' Send OTP failed: ${response.body}');
+        print('❌ [AuthService] Lỗi gửi OTP: ${response.statusCode} - ${response.body}');
         return false;
       }
+    } on TimeoutException {
+      print('⏰ [AuthService] Hết thời gian chờ phản hồi server khi gửi OTP');
+      return false;
     } catch (e) {
-      print(' Lỗi gửi OTP: $e');
+      print('⚠️ [AuthService] Lỗi gửi OTP: $e');
       return false;
     }
   }
 
-  // 🔹 Xác thực OTP + đăng ký tài khoản
+  // 🔹 Xác thực OTP + Đăng ký
   static Future<bool> verifyOtp(String sdt, String password, String otp) async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/verify-otp");
+    print("📤 [AuthService] Xác thực OTP: $otp cho SDT: $sdt");
+
     try {
-      final response = await http.post(
+      final response = await http
+          .post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'SDT': sdt,
-          'password': password,
-          'otp': otp,
-        }),
-      );
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'SDT': sdt, 'password': password, 'otp': otp}),
+      )
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 201) {
-        print('✅ Đăng ký thành công');
+        print('✅ [AuthService] Đăng ký tài khoản thành công');
         return true;
       } else {
-        print('❌ Lỗi đăng ký: ${response.body}');
+        print('❌ [AuthService] Đăng ký thất bại: ${response.body}');
         return false;
       }
+    } on TimeoutException {
+      print('⏰ [AuthService] Hết thời gian chờ phản hồi server khi verify OTP');
+      return false;
     } catch (e) {
-      print('⚠️ Lỗi xác thực OTP: $e');
+      print('⚠️ [AuthService] Lỗi xác thực OTP: $e');
       return false;
     }
   }
-
   // 🔹 Đăng nhập
   static Future<TaiKhoan?> login(String sdt, String password) async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/login");
-    print('🔗 API base URL hiện tại: ${Api.client.options.baseUrl}');
-    print('📤 Request gửi tới: $url');
+    print("📤 [AuthService] Gửi yêu cầu đăng nhập: $url");
+    print("📦 Dữ liệu gửi: SDT=$sdt, password=$password");
 
     try {
-      final response = await http.post(
+      final response = await http
+          .post(
         url,
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'SDT': sdt,
-          'password': password,
-        }),
-      );
+        body: jsonEncode({'SDT': sdt, 'password': password}),
+      )
+          .timeout(const Duration(seconds: 10));
+
+      print("📥 [AuthService] Status: ${response.statusCode}");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
         final userData = data['user'];
 
-        // 🔐 Lưu token vào SharedPreferences + cập nhật header
+        // 🔐 Lưu token
         await Api.setToken(token);
+        print("🔑 [AuthService] Token đã được lưu thành công");
 
         // 🔍 Giải mã token để lấy role
         final decoded = JwtDecoder.decode(token);
-        final role = decoded['role'];
-        print('👤 Role từ token: $role');
+        final role = decoded['role'] ?? 'User';
 
-        // ✅ Truyền role vào model TaiKhoan (model đã có field role)
         final taiKhoan = TaiKhoan(
           sdt: userData['SDT'] ?? '',
           role: role,
         );
 
-        print('✅ Đăng nhập thành công với vai trò: ${taiKhoan.role}');
+        print('✅ [AuthService] Đăng nhập thành công: ${taiKhoan.sdt} | Vai trò: ${taiKhoan.role}');
         return taiKhoan;
       } else {
-        print('❌ Lỗi đăng nhập: ${response.body}');
+        print('❌ [AuthService] Lỗi đăng nhập: ${response.statusCode} - ${response.body}');
         return null;
       }
+    } on TimeoutException {
+      print('⏰ [AuthService] Hết thời gian chờ phản hồi server khi đăng nhập');
+      return null;
     } catch (e) {
-      print('⚠️ Lỗi đăng nhập: $e');
+      print('⚠️ [AuthService] Lỗi đăng nhập: $e');
       return null;
     }
   }
+  // 🔹 Lấy thông tin người dùng hiện tại từ token
+  static Future<TaiKhoan?> getCurrentUser() async {
+    await Api.loadToken(); // load token từ SharedPreferences
+    final token = Api.token;
 
-  // 🔹 Lấy thông tin người dùng hiện tại
+    if (token == null) {
+      print("⚠️ [AuthService] Không có token, người dùng chưa đăng nhập");
+      return null;
+    }
+
+    try {
+      final decoded = JwtDecoder.decode(token);
+      final sdt = decoded['sdt'] ?? decoded['SDT'] ?? '';
+      final role = decoded['role'] ?? 'User';
+
+      print('📖 [AuthService] Token hợp lệ. SĐT: $sdt | Role: $role');
+      return TaiKhoan(sdt: sdt, role: role);
+    } catch (e) {
+      print("❌ [AuthService] Token không hợp lệ hoặc bị lỗi: $e");
+      return null;
+    }
+  }
+  // 🔹 Lấy thông tin người dùng từ /auth/me (server kiểm tra token)
   static Future<TaiKhoan?> me() async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/me");
     await Api.loadToken();
+    final token = Api.token;
+
+    if (token == null) {
+      print("⚠️ [AuthService] Không có token để xác thực");
+      return null;
+    }
 
     try {
-      final response = await http.get(
+      final response = await http
+          .get(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': Api.client.options.headers['Authorization'] ?? '',
+          'Authorization': 'Bearer $token',
         },
-      );
-
+      )
+          .timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return TaiKhoan.fromJson(data['user']);
+        final user = data['user'];
+        print("✅ [AuthService] Lấy thông tin user thành công: $user");
+        return TaiKhoan.fromJson(user);
       } else {
-        print('❌ Token không hợp lệ hoặc hết hạn');
+        print("❌ [AuthService] Token không hợp lệ hoặc hết hạn (${response.statusCode})");
       }
     } catch (e) {
-      print('⚠️ Lỗi xác thực token: $e');
+      print("⚠️ [AuthService] Lỗi xác thực token: $e");
     }
     return null;
   }
@@ -135,15 +174,23 @@ class AuthService {
   // 🔹 Đăng xuất
   static Future<void> logout() async {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/logout");
+    await Api.loadToken();
+    final token = Api.token;
+
     try {
       await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': Api.client.options.headers['Authorization'] ?? '',
+          if (token != null) 'Authorization': 'Bearer $token',
         },
       );
-    } catch (_) {}
+      print("🚪 [AuthService] Đã gửi yêu cầu logout lên server");
+    } catch (e) {
+      print("⚠️ [AuthService] Lỗi khi logout: $e");
+    }
+
     await Api.clearToken();
+    print("🧹 [AuthService] Token đã được xóa khỏi bộ nhớ");
   }
 }
