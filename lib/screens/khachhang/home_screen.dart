@@ -3,15 +3,10 @@ import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
-import '../../services/Trip_Service.dart';
 import '../../services/tinh_thanh_pho_service.dart';
 import '../auth/login_screen.dart';
-
 import 'profile_screen.dart';
 
-import '../khachhang/payment_screen.dart';
-import '../khachhang/trip_info_screen.dart';
-import 'map_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -116,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Icon(Icons.directions_bus, color: Colors.white, size: 26),
                 SizedBox(width: 6),
                 Text(
-                  "VeXeRom",
+                  "VeXeSmart",
                   style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,

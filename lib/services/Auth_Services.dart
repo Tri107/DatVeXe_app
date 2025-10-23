@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:jwt_decoder/jwt_decoder.dart';
 import '../config/api.dart';
 import '../models/TaiKhoan.dart';
 
@@ -63,12 +64,11 @@ class AuthService {
     final url = Uri.parse("${Api.client.options.baseUrl}/auth/login");
     print('🔗 API base URL hiện tại: ${Api.client.options.baseUrl}');
     print('📤 Request gửi tới: $url');
+
     try {
       final response = await http.post(
         url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'SDT': sdt,
           'password': password,
@@ -80,10 +80,22 @@ class AuthService {
         final token = data['token'];
         final userData = data['user'];
 
-        // Lưu token vào SharedPreferences + cập nhật header
+        // 🔐 Lưu token vào SharedPreferences + cập nhật header
         await Api.setToken(token);
 
-        return TaiKhoan.fromJson(userData);
+        // 🔍 Giải mã token để lấy role
+        final decoded = JwtDecoder.decode(token);
+        final role = decoded['role'];
+        print('👤 Role từ token: $role');
+
+        // ✅ Truyền role vào model TaiKhoan (model đã có field role)
+        final taiKhoan = TaiKhoan(
+          sdt: userData['SDT'] ?? '',
+          role: role,
+        );
+
+        print('✅ Đăng nhập thành công với vai trò: ${taiKhoan.role}');
+        return taiKhoan;
       } else {
         print('❌ Lỗi đăng nhập: ${response.body}');
         return null;

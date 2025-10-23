@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/TaiKhoan.dart';
 import '../../services/Auth_Services.dart';
 import '../khachhang/home_screen.dart';
+import '../taixe/taixe_home_screen.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,24 +36,38 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final user =
-      await AuthService.login(_sdtCtrl.text.trim(), _passCtrl.text.trim());
+      final user = await AuthService.login(
+        _sdtCtrl.text.trim(),
+        _passCtrl.text.trim(),
+      );
+
       if (user == null) {
-        setState(() => _error = 'Sai SĐT hoặc mật khẩu');
+        setState(() => _error = 'Sai số điện thoại hoặc mật khẩu');
         return;
       }
+
       if (!mounted) return;
       setState(() => _user = user);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đăng nhập thành công: ${user.sdt} (${user.role})')),
+        SnackBar(
+          content: Text('Đăng nhập thành công (${user.role})'),
+          backgroundColor: Colors.green,
+        ),
       );
 
-      // Điều hướng demo
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
-      );
+      // Điều hướng theo vai trò
+      if (user.role == 'taixe') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => TaiXeHomeScreen(user: user)),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen(user: user)),
+        );
+      }
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -70,64 +85,143 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Đăng nhập')),
+      backgroundColor: const Color(0xFFF4F7FB),
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Form(
-              key: _formKey,
-              child: ListView(
-                shrinkWrap: true,
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
                 children: [
-                  TextFormField(
-                    controller: _sdtCtrl,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Số điện thoại'),
-                    validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Vui lòng nhập SĐT' : null,
+                  // 🔹 Logo App
+                  Image.asset(
+                    'assets/images/app_logo.png',
+                    height: 120,
                   ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _passCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Mật khẩu'),
-                    validator: (v) =>
-                    (v == null || v.length < 6) ? 'Tối thiểu 6 ký tự' : null,
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'Chào mừng bạn trở lại!',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A237E),
+                    ),
                   ),
-                  const SizedBox(height: 16),
-                  if (_error != null)
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
                   const SizedBox(height: 8),
-                  ElevatedButton(
-                    onPressed: _loading ? null : _onLogin,
-                    child: _loading
-                        ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                        : const Text('Đăng nhập'),
+                  const Text(
+                    'Đăng nhập để tiếp tục đặt vé xe dễ dàng hơn',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 32),
+
+                  // 🔹 Form đăng nhập
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          TextFormField(
+                            controller: _sdtCtrl,
+                            keyboardType: TextInputType.phone,
+                            decoration: InputDecoration(
+                              labelText: 'Số điện thoại',
+                              prefixIcon:
+                              const Icon(Icons.phone, color: Colors.blue),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.trim().isEmpty)
+                                ? 'Vui lòng nhập SĐT'
+                                : null,
+                          ),
+                          const SizedBox(height: 16),
+                          TextFormField(
+                            controller: _passCtrl,
+                            obscureText: true,
+                            decoration: InputDecoration(
+                              labelText: 'Mật khẩu',
+                              prefixIcon:
+                              const Icon(Icons.lock, color: Colors.blue),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            validator: (v) => (v == null || v.length < 6)
+                                ? 'Tối thiểu 6 ký tự'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+
+                          if (_error != null)
+                            Text(
+                              _error!,
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 14),
+                            ),
+
+                          const SizedBox(height: 10),
+
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 60,
+                                vertical: 14,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            onPressed: _loading ? null : _onLogin,
+                            child: _loading
+                                ? const SizedBox(
+                              height: 22,
+                              width: 22,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                                : const Text(
+                              'Đăng nhập',
+                              style: TextStyle(
+                                  fontSize: 18, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
 
                   TextButton(
                     onPressed: _goToRegister,
                     child: const Text(
-                      'Chưa có tài khoản? Tạo tài khoản mới',
-                      style: TextStyle(fontSize: 15),
-                    ),
-                  ),
-                  if (_user != null) ...[
-                    const SizedBox(height: 16),
-                    Card(
-                      child: ListTile(
-                        title: Text('Xin chào ${_user!.sdt}'),
-                        subtitle: Text('Role: ${_user!.role}'),
+                      'Chưa có tài khoản? Đăng ký ngay',
+                      style: TextStyle(
+                        color: Colors.blue,
+                        fontSize: 15,
+                        decoration: TextDecoration.underline,
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
