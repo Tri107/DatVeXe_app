@@ -58,32 +58,59 @@ class _PaymentScreenState extends State<PaymentScreen> {
 
   Future<void> _handleCheckout() async {
     setState(() => _isProcessing = true);
-    // TODO: Thêm logic gọi API thanh toán MoMo/VNPAY
-    if (_paymentMethod == 1) {
-      final paymentUrl = await PaymentService.createVNPay(widget.veId, _totalPrice.toDouble());
-      if (paymentUrl != null) {
-        final uri = Uri.parse(paymentUrl);
-        if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-          throw Exception('Không thể mở liên kết $uri');
+
+    try {
+      if (_paymentMethod == 1) {
+        //  Thanh toán qua VNPay
+        final paymentUrl = await PaymentService.createVNPay(
+          widget.veId,
+          _totalPrice.toDouble(),
+        );
+
+        if (paymentUrl != null) {
+          print(' Đang mở liên kết: $paymentUrl');
+          final uri = Uri.parse(paymentUrl);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            print(' Đã mở VNPay URL thành công');
+          } else {
+            print(' Không thể mở URL: $uri');
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Không thể mở trình duyệt để thanh toán.')),
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không tạo được liên kết thanh toán VNPay')),
+          );
         }
-      } else {
+      } else if (_paymentMethod == 0) {
+
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không tạo được liên kết thanh toán VNPay')),
+          const SnackBar(
+            content: Text('Tính năng thanh toán MoMo đang được phát triển.'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      } else {
+        //  Không chọn phương thức thanh toán
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Vui lòng chọn phương thức thanh toán.'),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
-      return;
+    } catch (e) {
+      print(' Lỗi khi xử lý thanh toán: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi xử lý thanh toán: $e')),
+      );
+    } finally {
+      setState(() => _isProcessing = false);
     }
-
-    await Future.delayed(const Duration(seconds: 2));
-    setState(() => _isProcessing = false);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chức năng thanh toán đang được phát triển.'),
-        backgroundColor: Colors.blue,
-      ),
-    );
   }
+
 
   String _formatCurrency(num n) {
     return NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);

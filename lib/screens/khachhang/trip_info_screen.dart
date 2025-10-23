@@ -19,7 +19,7 @@ class TripInfoScreen extends StatefulWidget {
 class _TripInfoScreenState extends State<TripInfoScreen> {
   late Future<Chuyen> _futureChuyen;
 
-  // GIẢ ĐỊNH GIÁ VÉ - bạn có thể thay bằng giá thực tế từ API chuyến đi
+
   final double giaVe = 200000;
 
   @override
@@ -35,7 +35,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
   String _vnd(num n) =>
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);
 
-  // ✅ HÀM MỚI: Lấy SĐT từ SharedPreferences và chuyển sang màn TripCustomerInfo
+
   Future<void> _handleContinue() async {
     final userPhone = widget.phone;
 
@@ -54,7 +54,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
         builder: (context) => TripCustomerInfoScreen(
           chuyenId: widget.chuyenId,
           gia: giaVe,
-          phone: userPhone, // ✅ truyền đúng dữ liệu nhận được từ Login
+          phone: userPhone,
         ),
       ),
     );
@@ -99,8 +99,8 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                           context,
                           MaterialPageRoute(
                             builder: (_) => MapScreen(
-                              startName: chuyen.diemDi,
-                              endName: chuyen.diemDen,
+                              startName: chuyen.benDiName,
+                              endName: chuyen.benDenName,
                             ),
                           ),
                         );
@@ -120,6 +120,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -180,7 +181,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            onPressed: _handleContinue, // ✅ Sửa: dùng hàm mới
+            onPressed: _handleContinue,
             child: const Text('Tiếp tục'),
           ),
         ],

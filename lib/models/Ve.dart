@@ -52,10 +52,7 @@ class Ve {
       khachHangName: json['KhachHang_name'] as String? ?? 'N/A',
       chuyenName: json['Chuyen_name'] as String? ?? 'N/A',
       SDT: json['SDT'] as String? ?? 'N/A',
-
-      // SỬA 3: Chỉ cần gán giá trị đã parse, không cần giá trị mặc định
       ngayGio: ngayGioParsed,
-
       benDi: json['BenDi'] as String? ?? 'N/A',
       benDen: json['BenDen'] as String? ?? 'N/A',
     );
