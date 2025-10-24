@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:datvexe_app/screens/khachhang/trip_search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,14 +10,9 @@ import '../auth/login_screen.dart';
 import 'my_tickets_screen.dart';
 import 'profile_screen.dart';
 
-
-
 class HomeScreen extends StatefulWidget {
   final TaiKhoan user;
   const HomeScreen({super.key, required this.user});
-
-  // tạm test với veId=1 (bạn đã insert trong DB)
-  static const int demoVeId = 1;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -29,8 +25,14 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _fromSelected;
   String? _toSelected;
   final _tinhThanhService = TinhThanhPhoService();
-  /// 🔹 Danh sách tìm kiếm gần đây (lưu trong SharedPreferences)
+
+  /// 🔹 Danh sách tìm kiếm gần đây
   List<Map<String, dynamic>> _recentSearches = [];
+
+  /// 🔹 Khóa lưu theo tài khoản (sdt hoặc id)
+  String get _prefsKey =>
+      'recent_searches_${widget.user.sdt ?? "unknown"}';
+
 
   @override
   void initState() {
@@ -39,11 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadRecentSearches();
   }
 
-  /// Lấy danh sách tỉnh/thành phố từ API
+  /// 🔹 Lấy danh sách Tỉnh/Thành phố
   Future<void> _loadTinhThanhPho() async {
     try {
       final list = await _tinhThanhService.getAll();
-
       final distinctList = list.fold<List<TinhThanhPho>>([], (acc, e) {
         if (!acc.any((x) => x.tinhThanhPhoName == e.tinhThanhPhoName)) {
           acc.add(e);
@@ -67,46 +68,50 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  /// 🔹 Lưu lịch sử tìm kiếm vào SharedPreferences
+  /// 🔹 Lưu lịch sử tìm kiếm cho tài khoản hiện tại
   Future<void> _saveRecentSearches() async {
     final prefs = await SharedPreferences.getInstance();
-    final listAsString =
-    _recentSearches.map((item) => item.toString()).toList();
-    await prefs.setStringList('recent_searches', listAsString);
+    final jsonList = _recentSearches.map((item) => jsonEncode(item)).toList();
+    await prefs.setStringList(_prefsKey, jsonList);
+    debugPrint("💾 Đã lưu lịch sử tìm kiếm (${_recentSearches.length}) cho key: $_prefsKey");
   }
 
-  /// 🔹 Đọc lịch sử tìm kiếm và lọc theo thời gian (7 ngày gần nhất)
+  /// 🔹 Đọc lịch sử tìm kiếm theo tài khoản hiện tại
   Future<void> _loadRecentSearches() async {
     final prefs = await SharedPreferences.getInstance();
-    final listAsString = prefs.getStringList('recent_searches');
-    if (listAsString == null) return;
+    final listAsString = prefs.getStringList(_prefsKey);
+    if (listAsString == null) {
+      debugPrint("ℹ️ Không có lịch sử cho tài khoản này ($_prefsKey)");
+      return;
+    }
 
     final now = DateTime.now();
     final List<Map<String, dynamic>> restored = [];
 
-    for (final str in listAsString) {
-      final cleaned = str
-          .substring(1, str.length - 1)
-          .split(', ')
-          .map((e) => e.split(':'))
-          .where((pair) => pair.length == 2)
-          .map((pair) => MapEntry(pair[0].trim(), pair[1].trim()))
-          .toList();
-
-      final map = {for (var e in cleaned) e.key: e.value};
-      if (map.containsKey('timestamp')) {
-        final time = DateTime.tryParse(map['timestamp'] ?? '');
-        if (time != null &&
-            now.difference(time).inDays <= 7) { // ✅ chỉ lấy trong 7 ngày
-          restored.add(map);
+    for (final jsonStr in listAsString) {
+      try {
+        final Map<String, dynamic> map = jsonDecode(jsonStr);
+        if (map.containsKey('timestamp')) {
+          final time = DateTime.tryParse(map['timestamp'] ?? '');
+          if (time != null && now.difference(time).inDays <= 7) {
+            restored.add(map);
+          }
         }
+      } catch (e) {
+        debugPrint("⚠️ Lỗi khi parse lịch sử: $e");
       }
     }
 
     setState(() => _recentSearches = restored);
+
+    // ✅ Dọn dữ liệu cũ
+    final validJsonList = restored.map((item) => jsonEncode(item)).toList();
+    await prefs.setStringList(_prefsKey, validJsonList);
+
+    debugPrint("📜 Lịch sử cho tài khoản ${widget.user.sdt}: $_recentSearches");
   }
 
-  /// 🔹 Khi chọn ngày đi
+  /// 🔹 Chọn ngày đi
   Future<void> _chonNgayDi(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -129,9 +134,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
 
     if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
+      setState(() => _selectedDate = picked);
     }
   }
 
@@ -150,26 +153,22 @@ class _HomeScreenState extends State<HomeScreen> {
       'date': _selectedDate != null
           ? "${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}"
           : "Không chọn ngày",
-      'timestamp': DateTime.now().toIso8601String(), // ✅ ghi lại thời điểm
+      'timestamp': DateTime.now().toIso8601String(),
     };
 
     setState(() {
-      // Thêm tìm kiếm mới vào đầu danh sách
       _recentSearches.insert(0, search);
-
-      // Lọc lại — chỉ giữ 7 ngày gần nhất
       final now = DateTime.now();
-      _recentSearches = _recentSearches
-          .where((e) {
+      _recentSearches = _recentSearches.where((e) {
         final time = DateTime.tryParse(e['timestamp']);
         return time != null && now.difference(time).inDays <= 7;
-      })
-          .toList();
+      }).toList();
     });
 
-    await _saveRecentSearches(); // ✅ lưu xuống local
+    await _saveRecentSearches();
 
-    // Chuyển sang trang tìm chuyến
+    debugPrint("💾 Đã lưu lịch sử cho ${widget.user.sdt}: $_recentSearches");
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -182,6 +181,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// 🔹 Xóa toàn bộ lịch sử tài khoản này
+  Future<void> _clearSearchHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsKey);
+    setState(() => _recentSearches.clear());
+    debugPrint("🗑️ Đã xóa lịch sử cho key: $_prefsKey");
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -190,7 +197,8 @@ class _HomeScreenState extends State<HomeScreen> {
         preferredSize: const Size.fromHeight(60),
         child: Container(
           color: const Color(0xFF1565C0),
-          padding: const EdgeInsets.only(top: 35, left: 16, right: 16, bottom: 10),
+          padding:
+          const EdgeInsets.only(top: 35, left: 16, right: 16, bottom: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -246,7 +254,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // Form tìm kiếm
             Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              margin: const EdgeInsets.symmetric(
+                  horizontal: 16, vertical: 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -294,7 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     },
                   ),
                   const Divider(),
-
                   GestureDetector(
                     onTap: () => _chonNgayDi(context),
                     child: Container(
@@ -322,7 +330,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -344,13 +351,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // 🔹 Hiển thị danh sách tìm kiếm gần đây (nếu có)
+            // Hiển thị lịch sử tìm kiếm gần đây
             if (_recentSearches.isNotEmpty) ...[
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Text("Tìm kiếm gần đây",
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 16)),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Tìm kiếm gần đây",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                    IconButton(
+                      onPressed: _clearSearchHistory,
+                      icon: const Icon(Icons.delete_forever,
+                          color: Colors.red),
+                      tooltip: "Xóa lịch sử",
+                    ),
+                  ],
+                ),
               ),
               for (var search in _recentSearches)
                 _RecentSearch(
@@ -368,7 +387,6 @@ class _HomeScreenState extends State<HomeScreen> {
         currentIndex: _currentIndex,
         onTap: (index) {
           if (index == 1) {
-
             Navigator.push(
               context,
               MaterialPageRoute(
@@ -376,13 +394,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
           } else if (index == 2) {
-
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             );
           } else {
-
             setState(() => _currentIndex = index);
           }
         },
@@ -400,13 +416,16 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-//Widget phụ
 class _RecentSearch extends StatelessWidget {
   final String from;
   final String to;
   final String date;
-  const _RecentSearch(
-      {required this.from, required this.to, required this.date});
+
+  const _RecentSearch({
+    required this.from,
+    required this.to,
+    required this.date,
+  });
 
   @override
   Widget build(BuildContext context) {
