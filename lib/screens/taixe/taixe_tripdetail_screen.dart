@@ -15,6 +15,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
   Map<String, dynamic>? chuyen;
   List<dynamic> tramList = [];
   List<dynamic> khachList = [];
+  Map<int, bool> trangThaiDiemDanh = {}; // vé_id -> có mặt / vắng
 
   @override
   void initState() {
@@ -22,23 +23,44 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
     _loadTripDetail();
   }
 
-  /// 🔹 Gọi API backend để lấy chi tiết chuyến
   Future<void> _loadTripDetail() async {
     try {
-      print("🔎 Đang tải chi tiết chuyến ID: ${widget.chuyenId}");
+      print("Đang tải chi tiết chuyến ID: ${widget.chuyenId}");
       final data = await TaiXeService.getChuyenDetail(widget.chuyenId);
+      final diemDanhList = await TaiXeService.getDiemDanhTam(widget.chuyenId);
+
+      // Chuyển danh sách [{ve_id, coMat}] thành map {ve_id: coMat}
+      final Map<int, bool> trangThai = {
+        for (var item in diemDanhList) item['ve_id']: item['coMat'] ?? false
+      };
 
       setState(() {
         chuyen = data['chuyen'];
         tramList = data['tram'] ?? [];
         khachList = data['khach'] ?? [];
+        trangThaiDiemDanh = trangThai;
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Lỗi khi tải chi tiết chuyến: $e");
+      print("Lỗi khi tải chi tiết chuyến: $e");
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi tải chi tiết chuyến: $e')),
+      );
+    }
+  }
+
+  Future<void> _capNhatTrangThai(int veId, bool coMat) async {
+    try {
+      print("Cập nhật điểm danh vé $veId: ${coMat ? 'Có mặt' : 'Vắng'}");
+      await TaiXeService.capNhatDiemDanhTam(widget.chuyenId, veId, coMat);
+      setState(() {
+        trangThaiDiemDanh[veId] = coMat;
+      });
+    } catch (e) {
+      print("Lỗi khi cập nhật điểm danh: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi cập nhật điểm danh: $e')),
       );
     }
   }
@@ -60,7 +82,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Thông tin chuyến
+            // Thông tin chuyến
             Card(
               elevation: 3,
               shape: RoundedRectangleBorder(
@@ -69,8 +91,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
               child: ListTile(
                 leading: const Icon(Icons.directions_bus,
                     color: Colors.blueAccent),
-                title:
-                Text(chuyen?['Chuyen_name'] ?? 'Chuyến xe chưa rõ'),
+                title: Text(chuyen?['Chuyen_name'] ?? 'Chuyến xe'),
                 subtitle: Text(
                   "Tuyến: ${chuyen?['Ben_di_name']} → ${chuyen?['Ben_den_name']}\n"
                       "Biển số: ${chuyen?['Bien_so'] ?? ''}\n"
@@ -82,7 +103,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
 
             const SizedBox(height: 20),
 
-            // 🔹 Danh sách trạm dừng
+            // Trạm dừng
             const Text(
               "Trạm dừng chân",
               style: TextStyle(
@@ -90,7 +111,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
             ),
             const SizedBox(height: 10),
             if (tramList.isEmpty)
-              const Text("Không có trạm dừng chân nào.")
+              const Text("Không có trạm dừng chân.")
             else
               ...tramList.map((tram) => Card(
                 margin:
@@ -106,27 +127,51 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
 
             const SizedBox(height: 20),
 
-            // 🔹 Danh sách hành khách
+            // Hành khách
             const Text(
               "Danh sách hành khách",
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
+
             if (khachList.isEmpty)
               const Text("Chưa có hành khách nào đặt vé.")
             else
-              ...khachList.map((khach) => Card(
-                margin:
-                const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
-                  leading: const Icon(Icons.person,
-                      color: Colors.green),
-                  title: Text(khach['KhachHang_name']),
-                  subtitle: Text(
-                      "SĐT: ${khach['SDT']} | Vé: ${khach['Ve_id']}"),
-                ),
-              )),
+              ...khachList.map((khach) {
+                final veId = khach['Ve_id'];
+                final coMat = trangThaiDiemDanh[veId] ?? false;
+
+                return Card(
+                  margin:
+                  const EdgeInsets.symmetric(vertical: 6),
+                  child: ListTile(
+                    leading: const Icon(Icons.person,
+                        color: Colors.green),
+                    title: Text(khach['KhachHang_name']),
+                    subtitle: Text(
+                        "SĐT: ${khach['SDT']} | Vé: ${khach['Ve_id']}"),
+                    trailing: Switch(
+                      value: coMat,
+                      activeColor: Colors.green,
+                      onChanged: (value) {
+                        _capNhatTrangThai(veId, value);
+                      },
+                    ),
+                  ),
+                );
+              }).toList(),
+
+            const SizedBox(height: 20),
+
+            // Tổng kết
+            Center(
+              child: Text(
+                "Đã điểm danh: ${trangThaiDiemDanh.values.where((v) => v).length}/${khachList.length}",
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
           ],
         ),
       ),
