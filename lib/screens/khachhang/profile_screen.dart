@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/KhachHang.dart';
 import '../../services/KhachHang_Service.dart';
 import '../../services/Auth_Services.dart';
+import '../auth/login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -181,9 +182,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           TextButton(
             onPressed: () async {
-              await AuthService.logout();
+              await AuthService.logout(); // ✅ Xóa session/token
               if (!context.mounted) return;
-              Navigator.pop(context);
+
+              // ✅ Điều hướng về Login và xóa stack (không quay lại được)
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    (route) => false,
+              );
             },
             child: const Text(
               "Đăng xuất",
@@ -195,6 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
         ],
+
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
