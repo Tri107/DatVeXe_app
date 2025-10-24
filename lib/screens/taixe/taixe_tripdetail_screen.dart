@@ -179,13 +179,18 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
             Center(
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  await Navigator.push(
+                  // Mở trang quét QR và chờ kết quả trả về
+                  final veId = await Navigator.push<int>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) => const ScanQRScreen()),
+                      builder: (_) => ScanQRScreen(chuyenId: widget.chuyenId),
+                    ),
                   );
-                  // Sau khi quét xong, load lại danh sách điểm danh
-                  _loadTripDetail();
+
+                  // Nếu ScanQRScreen trả về veId (điểm danh thành công)
+                  if (veId != null) {
+                    await _capNhatTrangThai(veId, true);
+                  }
                 },
                 icon: const Icon(Icons.qr_code_scanner),
                 label: const Text("Quét mã QR vé"),
