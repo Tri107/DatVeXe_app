@@ -1,4 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import '../../config/api.dart';
 import '../../services/Ve_Service.dart';
 
 class TicketDetailScreen extends StatefulWidget {
@@ -12,11 +15,13 @@ class TicketDetailScreen extends StatefulWidget {
 class _TicketDetailScreenState extends State<TicketDetailScreen> {
   Map<String, dynamic>? ve;
   bool loading = true;
+  String? qrImage; // ✅ thêm biến lưu QR base64
 
   @override
   void initState() {
     super.initState();
     _loadVe();
+    _loadQRCode(); // ✅ gọi tải QR khi khởi động
   }
 
   Future<void> _loadVe() async {
@@ -31,6 +36,20 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi tải chi tiết vé: $e')),
       );
+    }
+  }
+
+  // ✅ Hàm tải mã QR từ backend
+  Future<void> _loadQRCode() async {
+    try {
+      final response = await Api.client.get('/ve/${widget.veId}/qr');
+      if (response.statusCode == 200) {
+        setState(() {
+          qrImage = response.data['qrCode'];
+        });
+      }
+    } catch (e) {
+      print('Lỗi tải QR: $e');
     }
   }
 
@@ -57,16 +76,36 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-
             const SizedBox(height: 20),
-            Text('Mã vé: ${ve!['Ve_id']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Mã vé: ${ve!['Ve_id']}',
+                style:
+                const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             Text('Khách hàng: ${ve!['KhachHang_name']}'),
-            //Text('Chuyến: ${ve!['TuyenDuong_name']}'),
             Text('Tuyến: ${ve!['Ben_di_name']} - ${ve!['Ben_den_name']}'),
             Text('Ngày giờ: ${ve!['Ngay_gio']}'),
             Text('Giá vé: ${ve!['Ve_gia']}đ'),
             const Divider(height: 30),
             Text('Ghi chú: ${ve!['GhiChu'] ?? 'Không có'}'),
+
+            // ✅ thêm mã QR ngay dưới phần ghi chú
+            const SizedBox(height: 30),
+            if (qrImage != null)
+              Column(
+                children: [
+                  Image.memory(
+                    base64Decode(qrImage!.split(',').last),
+                    width: 200,
+                    height: 200,
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Quét mã QR để tài xế điểm danh',
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              )
+            else
+              const Text('Đang tải mã QR...'),
           ],
         ),
       ),
