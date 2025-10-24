@@ -6,6 +6,7 @@ import '../../models/TinhThanhPho.dart';
 import '../../services/Auth_Services.dart';
 import '../../services/tinh_thanh_pho_service.dart';
 import '../auth/login_screen.dart';
+import 'my_tickets_screen.dart';
 import 'profile_screen.dart';
 
 
@@ -366,12 +367,22 @@ class _HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          if (index == 2) {
+          if (index == 1) {
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MyTicketsScreen(sdt: widget.user.sdt),
+              ),
+            );
+          } else if (index == 2) {
+
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfileScreen()),
             );
           } else {
+
             setState(() => _currentIndex = index);
           }
         },

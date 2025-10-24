@@ -1,4 +1,3 @@
-// lib/services/Ve_Service.dart
 import '../config/api.dart';
 
 class VeService {
@@ -18,8 +17,6 @@ class VeService {
         'Chuyen_id': chuyenId,
       };
 
-      // === SỬA LỖI Ở ĐÂY ===
-      // Endpoint đúng của bạn là '/ve', không phải '/ve/create'
       final response = await Api.post('/ve', veData);
 
       if (response.data != null && response.data['Ve_id'] != null) {
@@ -32,6 +29,41 @@ class VeService {
       }
     } catch (e) {
       print('--- [VeService] LỖI NGHIÊM TRỌNG KHI TẠO VÉ: $e ---');
+      rethrow;
+    }
+  }
+
+  // Lấy chi tiết 1 vé theo ID
+  static Future<Map<String, dynamic>> getVeById(int veId) async {
+    try {
+      final response = await Api.get('/ve/$veId');
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        throw Exception('Không thể tải chi tiết vé (${response.statusCode})');
+      }
+    } catch (e) {
+      print(' [VeService] Lỗi tải vé: $e');
+      rethrow;
+    }
+  }
+
+  ///  Lấy danh sách vé theo SĐT khách hàng
+  static Future<List<Map<String, dynamic>>> getByUser(String sdt) async {
+    try {
+      print('--- [VeService] Đang tải danh sách vé của user $sdt ---');
+      final response = await Api.get('/ve/user/$sdt');
+
+      if (response.statusCode == 200 && response.data is List) {
+        final List<Map<String, dynamic>> veList =
+        List<Map<String, dynamic>>.from(response.data);
+        print('--- [VeService] Tải ${veList.length} vé thành công ---');
+        return veList;
+      } else {
+        throw Exception('Phản hồi không hợp lệ từ server khi lấy danh sách vé.');
+      }
+    } catch (e) {
+      print(' [VeService] Lỗi khi tải vé của user: $e');
       rethrow;
     }
   }
