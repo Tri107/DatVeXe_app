@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/TaiXe_Service.dart';
+import 'scan_qr_screen.dart'; // ✅ import màn hình quét QR
 
 class TaiXeTripDetailScreen extends StatefulWidget {
   final int chuyenId;
@@ -29,7 +30,6 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
       final data = await TaiXeService.getChuyenDetail(widget.chuyenId);
       final diemDanhList = await TaiXeService.getDiemDanhTam(widget.chuyenId);
 
-      // Chuyển danh sách [{ve_id, coMat}] thành map {ve_id: coMat}
       final Map<int, bool> trangThai = {
         for (var item in diemDanhList) item['ve_id']: item['coMat'] ?? false
       };
@@ -170,6 +170,33 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
                 "Đã điểm danh: ${trangThaiDiemDanh.values.where((v) => v).length}/${khachList.length}",
                 style: const TextStyle(
                     fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+            const SizedBox(height: 30),
+
+            // ✅ Nút quét mã QR
+            Center(
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ScanQRScreen()),
+                  );
+                  // Sau khi quét xong, load lại danh sách điểm danh
+                  _loadTripDetail();
+                },
+                icon: const Icon(Icons.qr_code_scanner),
+                label: const Text("Quét mã QR vé"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 12, horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
               ),
             ),
           ],

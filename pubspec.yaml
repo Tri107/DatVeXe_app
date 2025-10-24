@@ -51,6 +51,8 @@ dependencies:
   jwt_decoder: ^2.0.1
   flutter_launcher_icons: ^0.14.4
   app_links: ^6.4.1
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.1
 
 dev_dependencies:
   flutter_test:
