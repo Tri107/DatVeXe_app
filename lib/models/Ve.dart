@@ -13,6 +13,7 @@ class Ve {
   final DateTime? ngayGio;
   final String benDi;
   final String benDen;
+  final String tuyenDuongName;
 
   Ve({
     required this.veId,
@@ -27,6 +28,7 @@ class Ve {
     this.ngayGio,
     required this.benDi,
     required this.benDen,
+    required this.tuyenDuongName,
   });
 
   factory Ve.fromJson(Map<String, dynamic> json) {
@@ -55,6 +57,7 @@ class Ve {
       ngayGio: ngayGioParsed,
       benDi: json['BenDi'] as String? ?? 'N/A',
       benDen: json['BenDen'] as String? ?? 'N/A',
+      tuyenDuongName: json['TuyenDuong_name'] ?? 'Không rõ',
     );
   }
 }
