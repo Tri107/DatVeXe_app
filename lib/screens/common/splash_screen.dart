@@ -13,7 +13,7 @@ class SplashScreen extends StatelessWidget {
           children: [
             // Logo app
             Image.asset(
-              'assets/images/app_logo.jpg', // thay bằng đường dẫn logo thật của bạn
+              'assets/images/app_logo.png', // thay bằng đường dẫn logo thật của bạn
               width: 120,
               height: 120,
             ),
