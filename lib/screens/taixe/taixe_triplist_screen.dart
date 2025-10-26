@@ -15,13 +15,27 @@ class _TaiXeTripListScreenState extends State<TaiXeTripListScreen> {
   bool isLoading = true;
   List<dynamic> trips = [];
 
+  String _formatDateTime(String? dateTimeString) {
+    if (dateTimeString == null || dateTimeString.isEmpty) return 'Không rõ';
+    try {
+      final dateTime = DateTime.parse(dateTimeString);
+      return "${dateTime.day.toString().padLeft(2, '0')}/"
+          "${dateTime.month.toString().padLeft(2, '0')}/"
+          "${dateTime.year} "
+          "${dateTime.hour.toString().padLeft(2, '0')}:"
+          "${dateTime.minute.toString().padLeft(2, '0')}";
+    } catch (e) {
+      return 'Không rõ';
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _loadTrips();
   }
 
-  /// 🔹 Gọi API lấy danh sách chuyến xe của tài xế
+  //Gọi API lấy danh sách chuyến xe của tài xế
   Future<void> _loadTrips() async {
     try {
       print("📦 Đang tải danh sách chuyến cho tài xế ID: ${widget.taiXeId}");
@@ -86,9 +100,8 @@ class _TaiXeTripListScreenState extends State<TaiXeTripListScreen> {
                   ),
                 ),
                 subtitle: Text(
-                  "${trip['Ben_di_name'] ?? ''} → ${trip['Ben_den_name'] ?? ''}\n"
-                      "Thời gian: ${trip['Ngay_gio'] ?? 'Không rõ'}\n"
-                      "Trạng thái: ${trip['Tinh_Trang'] ?? 'Không rõ'}",
+                  "${trip['Ben_di_name'] ?? ''} → ${trip['Ben_den_name'] ?? ''} \n| "
+                      "Thời gian: ${_formatDateTime(trip['Ngay_gio'])}",
                   style: const TextStyle(fontSize: 13, height: 1.4),
                 ),
                 isThreeLine: true,

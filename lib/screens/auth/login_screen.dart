@@ -17,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _sdtCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
+  bool _obscurePassword = true;
   String? _error;
   TaiKhoan? _user;
 
@@ -56,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       );
 
-      // Điều hướng theo vai trò
       if (user.role == 'taixe') {
         Navigator.pushReplacement(
           context,
@@ -94,15 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.all(24),
               child: Column(
                 children: [
-                  // 🔹 Logo App
-                  Image.asset(
-                    'assets/images/app_logo.png',
-                    height: 120,
-                  ),
-                  const SizedBox(height: 24),
-
+                  Image.asset('assets/images/logo2.png', height: 200),
+                  const SizedBox(height: 5),
                   const Text(
-                    'Chào mừng bạn trở lại!',
+                    'Đặt vé xe tiện lợi cùng Vexesmart',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -117,7 +113,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // 🔹 Form đăng nhập
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
@@ -153,11 +148,22 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 16),
                           TextFormField(
                             controller: _passCtrl,
-                            obscureText: true,
+                            obscureText: _obscurePassword,
                             decoration: InputDecoration(
                               labelText: 'Mật khẩu',
                               prefixIcon:
                               const Icon(Icons.lock, color: Colors.blue),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () => setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                }),
+                              ),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -169,11 +175,9 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 20),
 
                           if (_error != null)
-                            Text(
-                              _error!,
-                              style: const TextStyle(
-                                  color: Colors.red, fontSize: 14),
-                            ),
+                            Text(_error!,
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 14)),
 
                           const SizedBox(height: 10),
 
@@ -181,9 +185,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 60,
-                                vertical: 14,
-                              ),
+                                  horizontal: 60, vertical: 14),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -210,16 +212,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
 
                   const SizedBox(height: 20),
-
                   TextButton(
                     onPressed: _goToRegister,
                     child: const Text(
                       'Chưa có tài khoản? Đăng ký ngay',
-                      style: TextStyle(
-                        color: Colors.blue,
-                        fontSize: 15,
-                        decoration: TextDecoration.underline,
-                      ),
+                      style: TextStyle(color: Colors.blue, fontSize: 15),
                     ),
                   ),
                 ],

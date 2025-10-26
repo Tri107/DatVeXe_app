@@ -25,18 +25,14 @@ class _TaiXeHomeScreenState extends State<TaiXeHomeScreen> {
     _loadDriverData();
   }
 
-  /// 🔹 Lấy thông tin tài xế theo SĐT
   Future<void> _loadDriverData() async {
     try {
-      print("📞 Gọi API lấy tài xế theo SDT: ${widget.user.sdt}");
       final data = await TaiXeService.getTaiXeByPhone(widget.user.sdt);
-      print("✅ Dữ liệu tài xế: $data");
       setState(() {
         driver = data;
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Lỗi tải tài xế: $e");
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi tải thông tin tài xế: $e')),
@@ -44,13 +40,11 @@ class _TaiXeHomeScreenState extends State<TaiXeHomeScreen> {
     }
   }
 
-  /// 🔹 Đăng xuất: xóa token và quay lại Login
   Future<void> _logout(BuildContext context) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     Api.token = null;
     Api.client.options.headers.remove('Authorization');
-
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -61,10 +55,10 @@ class _TaiXeHomeScreenState extends State<TaiXeHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: const Color(0xFFF4F7FC),
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
-        title: Text('Xin chào, ${widget.user.sdt} 👋'),
+        title: const Text('Trang chủ'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -75,102 +69,122 @@ class _TaiXeHomeScreenState extends State<TaiXeHomeScreen> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Trang tài xế',
-              style: TextStyle(
-                  fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Chào mừng bạn quay lại, ${widget.user.sdt}',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            const Divider(),
+          : SingleChildScrollView(
+        child: Padding(
+          padding:
+          const EdgeInsets.symmetric(horizontal: 20.0, vertical: 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Ảnh minh họa ở đầu
+              SizedBox(
+                height: 180,
+                child: Image.asset(
+                  'assets/images/bus.jpg',
+                  fit: BoxFit.contain,
+                ),
+              ),
 
-            const SizedBox(height: 16),
+              const SizedBox(height: 24),
 
-            /// 🔹 Thông tin tài xế
-            if (driver != null)
-              Card(
-                elevation: 2,
-                child: ListTile(
-                  leading: const Icon(Icons.account_circle,
-                      color: Colors.blueAccent, size: 42),
-                  title: Text(driver!['TaiXe_name'] ?? 'Không có tên'),
-                  subtitle: Text(
-                    'Bằng lái: ${driver!['TaiXe_BangLai'] ?? 'Chưa có'}\n'
-                        'SĐT: ${driver!['SDT'] ?? ''}',
+              // Thông tin tài xế
+              if (driver != null)
+                Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.account_circle,
+                            color: Colors.blueAccent, size: 56),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                driver!['TaiXe_name'] ?? 'Không có tên',
+                                style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Bằng lái: ${driver!['TaiXe_BangLai'] ?? 'Chưa có'}\n'
+                                    'SĐT: ${driver!['SDT'] ?? ''}',
+                                style: const TextStyle(fontSize: 15),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                const Text(' Không tìm thấy thông tin tài xế.'),
+
+              const SizedBox(height: 40),
+
+              // Nút chính
+              SizedBox(
+                width: double.infinity,
+                height: 65,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    elevation: 5,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (driver?['TaiXe_id'] != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => TaiXeTripListScreen(
+                            taiXeId: driver!['TaiXe_id'],
+                          ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Không tìm thấy ID tài xế'),
+                        ),
+                      );
+                    }
+                  },
+                  icon: const Icon(Icons.directions_bus,
+                      size: 30, color: Colors.white),
+                  label: const Text(
+                    'Danh sách chuyến xe của bạn',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              )
-            else
-              const Text('❌ Không tìm thấy thông tin tài xế.'),
-
-            const SizedBox(height: 24),
-            const Divider(),
-
-            const SizedBox(height: 12),
-
-            /// 📦 Danh sách chức năng
-            Expanded(
-              child: ListView(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.directions_bus,
-                        color: Colors.blue),
-                    title:
-                    const Text('Danh sách chuyến xe của bạn'),
-                    subtitle: const Text(
-                        'Xem các chuyến sắp tới & đang chạy'),
-                    onTap: () {
-                      if (driver?['TaiXe_id'] != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => TaiXeTripListScreen(
-                              taiXeId: driver!['TaiXe_id'],
-                            ),
-                          ),
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Không tìm thấy ID tài xế'),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.assignment,
-                        color: Colors.green),
-                    title: const Text('Lịch sử chuyến đi'),
-                    subtitle: const Text(
-                        'Xem lại các chuyến đã hoàn thành'),
-                    onTap: () {
-                      // TODO: mở màn hình lịch sử chuyến đi
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.person,
-                        color: Colors.orange),
-                    title: const Text('Thông tin cá nhân'),
-                    subtitle: const Text(
-                        'Xem và cập nhật hồ sơ tài xế'),
-                    onTap: () {
-                      // TODO: mở màn hình hồ sơ tài xế
-                    },
-                  ),
-                ],
               ),
-            ),
-          ],
+
+              const SizedBox(height: 40),
+
+              // Gợi ý nhỏ ở cuối trang
+              const Text(
+                'Hãy kiểm tra danh sách chuyến xe của bạn\nvà đảm bảo mọi thứ sẵn sàng trước khi khởi hành 🚍',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 15,
+                    color: Colors.black54,
+                    fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
         ),
       ),
     );

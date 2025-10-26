@@ -28,6 +28,7 @@ class _OtpScreenState extends State<OtpScreen> {
     setState(() {
       _loading = true;
       _error = null;
+      _message = null;
     });
 
     final success =
@@ -53,35 +54,139 @@ class _OtpScreenState extends State<OtpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Xác nhận OTP')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Nhập mã OTP được gửi tới số điện thoại ${widget.sdt}',
-              style: const TextStyle(fontSize: 16),
+      backgroundColor: const Color(0xFFF4F7FB),
+      body: Center(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                children: [
+                  Image.asset('assets/images/logo2.png', height: 150),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Xác nhận mã OTP',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A237E),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Highlight số điện thoại
+                  RichText(
+                    textAlign: TextAlign.center,
+                    text: TextSpan(
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black87,
+                      ),
+                      children: [
+                        const TextSpan(text: 'Nhập mã OTP được gửi tới số điện thoại '),
+                        TextSpan(
+                          text: widget.sdt,
+                          style: const TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black12,
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        TextField(
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          decoration: InputDecoration(
+                            labelText: 'Mã OTP',
+                            labelStyle: const TextStyle(color: Colors.black87),
+                            prefixIcon: const Icon(Icons.lock_clock, color: Colors.blue),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+
+                        if (_error != null)
+                          Text(_error!,
+                              style: const TextStyle(
+                                  color: Colors.red, fontSize: 14)),
+                        if (_message != null)
+                          Text(_message!,
+                              style: const TextStyle(
+                                  color: Colors.green, fontSize: 14)),
+
+                        const SizedBox(height: 10),
+
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 60, vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          onPressed: _loading ? null : _verifyOtp,
+                          child: _loading
+                              ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                              : const Text(
+                            'Xác nhận OTP',
+                            style: TextStyle(
+                                fontSize: 18, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const LoginScreen()),
+                      );
+                    },
+                    child: const Text(
+                      'Quay lại đăng nhập',
+                      style: TextStyle(color: Colors.blue, fontSize: 15),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _otpController,
-              decoration: const InputDecoration(labelText: 'Mã OTP'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            if (_error != null)
-              Text(_error!, style: const TextStyle(color: Colors.red)),
-            if (_message != null)
-              Text(_message!, style: const TextStyle(color: Colors.green)),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: _loading ? null : _verifyOtp,
-              child: _loading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text('Xác nhận OTP'),
-            ),
-          ],
+          ),
         ),
       ),
     );

@@ -53,6 +53,9 @@ dependencies:
   app_links: ^6.4.1
   qr_flutter: ^4.1.0
   mobile_scanner: ^3.5.1
+  confetti: ^0.8.0
+  animate_do: ^4.2.0
+  lottie: ^3.3.2
 
 dev_dependencies:
   flutter_test:
@@ -80,6 +83,9 @@ flutter:
   assets:
     - .env
     - assets/images/app_logo.png
+    - assets/images/logo2.png
+    - assets/images/bus.jpg
+    - assets/animations/Celebrations.json
   # An image assets can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
 
