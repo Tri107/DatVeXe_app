@@ -4,13 +4,22 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/api.dart';
 import '../../models/Ve.dart';
 import '../../services/Payment_Service.dart';
+import '../../themes/gradient.dart';
 import 'payment_successful.dart';
 
 class PaymentScreen extends StatefulWidget {
   final int veId;
   final String email;
+  final int chuyenId;
+  final double gia;
 
-  const PaymentScreen({super.key, required this.veId, required this.email});
+  const PaymentScreen({
+    super.key,
+    required this.veId,
+    required this.email,
+    required this.chuyenId,
+    required this.gia,
+  });
 
   @override
   State<PaymentScreen> createState() => _PaymentScreenState();
@@ -22,27 +31,28 @@ class _PaymentScreenState extends State<PaymentScreen> {
   num _insuranceFee = 0;
   num _totalPrice = 0;
   bool _useInsurance = false;
-  int _paymentMethod = 0;
   bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
     _futureVeSummary = _loadSummary();
-    _futureVeSummary.then((ve) {
-      if (mounted) {
-        setState(() {
-          _basePrice = ve.veGia;
-          _calculateTotal();
+    _futureVeSummary
+        .then((ve) {
+          if (mounted) {
+            setState(() {
+              _basePrice = ve.veGia;
+              _calculateTotal();
+            });
+          }
+        })
+        .catchError((error) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Không thể tải thông tin vé. $error')),
+            );
+          }
         });
-      }
-    }).catchError((error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Không thể tải thông tin vé. $error')),
-        );
-      }
-    });
   }
 
   Future<Ve> _loadSummary() async {
@@ -55,70 +65,50 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _totalPrice = _basePrice + _insuranceFee;
   }
 
-  /// ✅ Xử lý thanh toán VNPay (chưa gửi Gmail ngay)
+  // Xử lý thanh toán VNPay (chưa gửi Gmail ngay)
   Future<void> _handleCheckout() async {
     setState(() => _isProcessing = true);
 
     try {
-      if (_paymentMethod == 1) {
-        // Thanh toán VNPay
-        final paymentUrl = await PaymentService.createVNPay(
-          widget.veId,
-          _totalPrice.toDouble(),
-        );
+      final paymentUrl = await PaymentService.createVNPay(
+        widget.veId,
+        _totalPrice.toDouble(),
+      );
 
-        if (paymentUrl != null) {
-          final uri = Uri.parse(paymentUrl);
-          if (await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-
-            // ❗ Không chuyển trang ngay — đợi callback VNPay
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Đang chờ xác nhận thanh toán từ VNPay..."),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Không thể mở VNPay.')),
-            );
-          }
-        } else {
+      if (paymentUrl != null) {
+        final uri = Uri.parse(paymentUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Không tạo được liên kết VNPay')),
+            const SnackBar(
+              content: Text("Đang chờ xác nhận thanh toán từ VNPay..."),
+              backgroundColor: Colors.blue,
+            ),
           );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Không thể mở VNPay.')));
         }
-      } else if (_paymentMethod == 0) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tính năng MoMo đang phát triển.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Vui lòng chọn phương thức thanh toán.'),
-          ),
+          const SnackBar(content: Text('Không tạo được liên kết VNPay')),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi khi xử lý thanh toán: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Lỗi khi xử lý thanh toán: $e')));
     } finally {
       setState(() => _isProcessing = false);
     }
   }
 
-  /// ✅ Gọi hàm này khi backend xác nhận thanh toán thành công
+  // Gọi hàm này khi backend xác nhận thanh toán thành công
   void _onPaymentSuccess() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-        builder: (_) => PaymentSuccessful(email: widget.email),
-      ),
+      MaterialPageRoute(builder: (_) => PaymentSuccessful(email: widget.email)),
     );
   }
 
@@ -128,8 +118,31 @@ class _PaymentScreenState extends State<PaymentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Xác nhận và Thanh toán')),
-      backgroundColor: const Color(0xFFF4F6F9),
+      backgroundColor: Colors.grey[100],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: Container(
+          decoration: const BoxDecoration(gradient: AppGradients.primary),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                Navigator.pop(context, true);
+              },
+            ),
+            title: const Text(
+              'Xác nhận và Thanh toán',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
       body: FutureBuilder<Ve>(
         future: _futureVeSummary,
         builder: (context, snapshot) {
@@ -151,7 +164,10 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       title: 'Thông tin hành khách',
                       icon: Icons.person_outline,
                       children: [
-                        _buildInfoRow('Họ và tên', ve.khachHangName ?? 'Không rõ'),
+                        _buildInfoRow(
+                          'Họ và tên',
+                          ve.khachHangName ?? 'Không rõ',
+                        ),
                         _buildInfoRow('Số điện thoại', ve.SDT ?? 'Không rõ'),
                       ],
                     ),
@@ -180,9 +196,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             });
                           },
                           title: const Text('Bảo hiểm chuyến đi'),
-                          subtitle: Text(
-                            'Phí bảo hiểm: 5% (${_formatCurrency(_basePrice * 0.05)})',
-                          ),
+                          subtitle: Text('Phí bảo hiểm: 5% giá vé gốc'),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                       ],
@@ -192,26 +206,15 @@ class _PaymentScreenState extends State<PaymentScreen> {
                       title: 'Phương thức thanh toán',
                       icon: Icons.payment_outlined,
                       children: [
-                        RadioListTile<int>(
-                          value: 0,
-                          groupValue: _paymentMethod,
-                          onChanged: (v) => setState(() => _paymentMethod = v ?? 0),
-                          title: const Text('Thanh toán qua MoMo'),
-                          secondary: Image.network(
-                            'https://cdn.haitrieu.com/wp-content/uploads/2022/10/Logo-MoMo-Circle.png',
-                            width: 28,
-                            height: 28,
-                          ),
-                        ),
-                        RadioListTile<int>(
-                          value: 1,
-                          groupValue: _paymentMethod,
-                          onChanged: (v) => setState(() => _paymentMethod = v ?? 1),
-                          title: const Text('Thanh toán qua VNPAY'),
-                          secondary: Image.network(
+                        ListTile(
+                          leading: Image.network(
                             'https://vinadesign.vn/uploads/images/2023/05/vnpay-logo-vinadesign-25-12-57-55.jpg',
-                            width: 28,
-                            height: 28,
+                            width: 32,
+                            height: 32,
+                          ),
+                          title: const Text('Thanh toán qua VNPay'),
+                          subtitle: const Text(
+                            'Hỗ trợ thanh toán an toàn, nhanh chóng.',
                           ),
                         ),
                       ],
@@ -244,11 +247,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, color: Colors.blue),
-            const SizedBox(width: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-          ]),
+          Row(
+            children: [
+              Icon(icon, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
           const Divider(),
           ...children,
         ],
@@ -256,26 +261,27 @@ class _PaymentScreenState extends State<PaymentScreen> {
     );
   }
 
-  Widget _buildInfoRow(String label, String value, {Color? valueColor}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.black54)),
-        Flexible(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: valueColor ?? Colors.black,
+  Widget _buildInfoRow(String label, String value, {Color? valueColor}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.black54)),
+            Flexible(
+              child: Text(
+                value,
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? Colors.black,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-            overflow: TextOverflow.ellipsis,
-          ),
+          ],
         ),
-      ],
-    ),
-  );
+      );
 
   Widget _buildBottomBar() {
     return Container(
@@ -289,16 +295,25 @@ class _PaymentScreenState extends State<PaymentScreen> {
         children: [
           _buildInfoRow('Giá vé gốc', _formatCurrency(_basePrice)),
           if (_useInsurance)
-            _buildInfoRow('Phí bảo hiểm', '+ ${_formatCurrency(_insuranceFee)}'),
+            _buildInfoRow(
+              'Phí bảo hiểm',
+              '+ ${_formatCurrency(_insuranceFee)}',
+            ),
           const Divider(),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Tổng cộng',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              Text(_formatCurrency(_totalPrice),
-                  style: const TextStyle(
-                      color: Colors.orange, fontWeight: FontWeight.bold)),
+              const Text(
+                'Tổng cộng',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              Text(
+                _formatCurrency(_totalPrice),
+                style: const TextStyle(
+                  color: Colors.orange,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -310,9 +325,13 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
             child: _isProcessing
                 ? const CircularProgressIndicator(color: Colors.black)
-                : Text('Thanh toán ${_formatCurrency(_totalPrice)}',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, color: Colors.black)),
+                : Text(
+                    'Thanh toán ${_formatCurrency(_totalPrice)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
           ),
         ],
       ),

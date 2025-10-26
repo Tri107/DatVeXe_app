@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/Chuyen.dart';
 import '../../services/Trip_Service.dart';
+import '../../themes/gradient.dart';
 
 class TripSearchScreen extends StatefulWidget {
   final String from;
@@ -35,7 +36,6 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
     );
   }
 
-  // Widget tái sử dụng để hiển thị một hàng thông tin có icon
   Widget _buildInfoRow({required IconData icon, required String text}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -58,120 +58,155 @@ class _TripSearchScreenState extends State<TripSearchScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Kết quả tìm kiếm'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
-        centerTitle: true,
+      backgroundColor: Colors.grey[100],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: Container(
+          decoration: const BoxDecoration(
+            gradient: AppGradients.primary,
+          ),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            title: const Text(
+              'Kết quả tìm kiếm',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
       ),
-      backgroundColor: Colors.grey[200], // Đồng bộ màu nền
+
       body: FutureBuilder<List<Chuyen>>(
         future: _futureChuyenList,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1976D2)),
+            );
           } else if (snapshot.hasError) {
             return Center(child: Text('Lỗi tải dữ liệu: ${snapshot.error}'));
           } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
               child: Text(
-                'Không tìm thấy chuyến xe phù hợp.',
-                style: TextStyle(fontSize: 16),
+                'Không tìm thấy chuyến xe phù hợp',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
               ),
             );
           }
 
           final chuyenList = snapshot.data!;
-
           return ListView.builder(
-            padding: const EdgeInsets.all(8), // Thêm padding cho ListView
+            padding: const EdgeInsets.all(12),
             itemCount: chuyenList.length,
             itemBuilder: (context, index) {
               final chuyen = chuyenList[index];
-              // Tách riêng giờ và ngày để trình bày đẹp hơn
               final thoiGian = DateFormat('HH:mm').format(chuyen.ngayGio);
               final ngay = DateFormat('dd/MM/yyyy').format(chuyen.ngayGio);
+              final bool conCho =
+              chuyen.tinhTrang.toLowerCase().contains('còn');
 
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+              return AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.grey.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
                 ),
-                child: InkWell( // Dùng InkWell để có hiệu ứng đẹp khi nhấn
-                  borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(14),
                   onTap: () {
-                    // SỬA LỖI Ở ĐÂY:
-                    // Đổi tên tham số từ `veId` thành `chuyenId`
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => TripInfoScreen(chuyenId: chuyen.chuyenId, phone: widget.phone),
+                        builder: (_) => TripInfoScreen(
+                          chuyenId: chuyen.chuyenId,
+                          phone: widget.phone,
+                        ),
                       ),
                     );
                   },
                   child: Padding(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Hàng 1: Giờ khởi hành và Tên chuyến
+                        // Phần đầu: Giờ và trạng thái
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              thoiGian,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.blueAccent,
-                              ),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time,
+                                    color: Colors.blueAccent, size: 22),
+                                const SizedBox(width: 6),
+                                Text(
+                                  thoiGian,
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.blueAccent,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: conCho
+                                    ? Colors.green.shade100
+                                    : Colors.red.shade100,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
                               child: Text(
-                                chuyen.chuyenName,
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
+                                chuyen.tinhTrang,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: conCho
+                                      ? Colors.green.shade800
+                                      : Colors.red.shade800,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const Divider(height: 20),
 
-                        // Hàng 2: Các thông tin chi tiết
-                        _buildInfoRow(icon: Icons.route_outlined, text: chuyen.tuyenDuongName),
-                        _buildInfoRow(icon: Icons.calendar_today_outlined, text: 'Ngày: $ngay'),
-                        _buildInfoRow(icon: Icons.directions_bus_outlined, text: 'Loại Xe: ${chuyen.loaiXeName}'),
+                        const SizedBox(height: 6),
 
-                        const SizedBox(height: 10),
-
-                        // Hàng 3: Tình trạng chuyến (được làm nổi bật)
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: chuyen.tinhTrang.toLowerCase() == 'còn chỗ'
-                                  ? Colors.green.shade100
-                                  : Colors.red.shade100,
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              chuyen.tinhTrang,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: chuyen.tinhTrang.toLowerCase() == 'còn chỗ'
-                                    ? Colors.green.shade800
-                                    : Colors.red.shade800,
-                              ),
-                            ),
+                        Text(
+                          chuyen.chuyenName,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
                           ),
+                        ),
+
+                        const SizedBox(height: 8),
+                        const Divider(),
+                        _buildInfoRow(
+                          icon: Icons.route_outlined,
+                          text: chuyen.tuyenDuongName,
+                        ),
+                        _buildInfoRow(
+                          icon: Icons.calendar_today_outlined,
+                          text: 'Ngày khởi hành: $ngay',
+                        ),
+                        _buildInfoRow(
+                          icon: Icons.directions_bus_filled_outlined,
+                          text: 'Loại xe: ${chuyen.loaiXeName}',
                         ),
                       ],
                     ),

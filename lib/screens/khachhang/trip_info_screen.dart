@@ -1,16 +1,17 @@
-// lib/screens/khachhang/trip_info_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/Chuyen.dart';
 import '../../services/Trip_Service.dart';
 import '../../services/Auth_Services.dart';
+import '../../themes/gradient.dart';
 import 'map_screen.dart';
 import 'trip_customer_info_screen.dart';
 
 class TripInfoScreen extends StatefulWidget {
   final int chuyenId;
   final String? phone;
+
   const TripInfoScreen({super.key, required this.chuyenId, this.phone});
 
   @override
@@ -26,53 +27,39 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
   void initState() {
     super.initState();
     _futureChuyen = ChuyenService.fetchTripById(widget.chuyenId);
-    _loadUserInfo(); // ✅ Gọi hàm lấy thông tin đăng nhập
+    _loadUserInfo();
   }
 
-  /// ✅ Lấy thông tin người dùng đã đăng nhập
   Future<void> _loadUserInfo() async {
     try {
-      final user = await AuthService.getCurrentUser(); // lấy từ token
+      final user = await AuthService.getCurrentUser();
       if (user != null) {
-        print("✅ [TripInfoScreen] Đã lấy user từ token: ${user.sdt}");
-        setState(() {
-          _userPhone = user.sdt;
-        });
+        setState(() => _userPhone = user.sdt);
       } else {
-        // Nếu token không có user, thử lấy từ SharedPreferences (fallback)
         final prefs = await SharedPreferences.getInstance();
-        final savedPhone = prefs.getString('user_phone');
-        if (savedPhone != null && savedPhone.isNotEmpty) {
-          print("✅ [TripInfoScreen] Đã lấy phone từ SharedPreferences: $savedPhone");
-          setState(() {
-            _userPhone = savedPhone;
-          });
-        }
+        setState(() => _userPhone = prefs.getString('user_phone'));
       }
     } catch (e) {
-      print("⚠️ [TripInfoScreen] Lỗi khi load thông tin user: $e");
+      print("⚠️ Lỗi load user: $e");
     }
   }
 
-  String _formatDateTime(DateTime dt) {
-    return DateFormat('HH:mm - EEEE, dd/MM/yyyy', 'vi_VN').format(dt);
-  }
+  String _formatDateTime(DateTime dt) =>
+      DateFormat('HH:mm - EEEE, dd/MM/yyyy', 'vi_VN').format(dt);
 
   String _vnd(num n) =>
       NumberFormat.currency(locale: 'vi_VN', symbol: 'đ').format(n);
 
   Future<void> _handleContinue() async {
     final userPhone = _userPhone ?? widget.phone;
-
     if (userPhone == null || userPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Không tìm thấy số điện thoại người dùng!')),
+        const SnackBar(
+          content: Text('Không tìm thấy số điện thoại người dùng!'),
+        ),
       );
       return;
     }
-
-    print('📱 [TripInfoScreen] Truyền SDT qua TripCustomerInfo: $userPhone');
-
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -88,13 +75,25 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Thông tin chuyến đi'),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 1,
+      backgroundColor: Colors.grey[100],
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(60),
+        child: Container(
+          decoration: const BoxDecoration(gradient: AppGradients.primary),
+          child: AppBar(
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            centerTitle: true,
+            title: const Text(
+              'Chi tiết chuyến đi',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
       ),
-      backgroundColor: Colors.grey[200],
       body: FutureBuilder<Chuyen>(
         future: _futureChuyen,
         builder: (ctx, snap) {
@@ -104,52 +103,50 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
           if (snap.hasError) {
             return Center(child: Text('Lỗi: ${snap.error}'));
           }
-
           final chuyen = snap.data!;
 
-          return Column(
+          return Stack(
             children: [
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-                  children: [
-                    _buildTripInfoCard(chuyen),
-                    const SizedBox(height: 12),
-                    _buildVehicleInfoCard(chuyen),
-                    const SizedBox(height: 20),
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MapScreen(
-                              startName: chuyen.benDiName,
-                              endName: chuyen.benDenName,
-                            ),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.map_outlined),
-                      label: const Text('Xem Bản Đồ Đường Đi'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+              Column(
+                children: [
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildHeaderCard(chuyen),
+                        const SizedBox(height: 16),
+                        _buildTripInfoCard(chuyen),
+                        const SizedBox(height: 16),
+                        _buildVehicleInfoCard(chuyen),
+                        const SizedBox(height: 120),
+                      ],
+                    ),
+                  ),
+                  _buildPaymentSection(),
+                ],
+              ),
+
+              // Nút xem bản đồ nổi
+              Positioned(
+                right: 24,
+                bottom: 110,
+                child: FloatingActionButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MapScreen(
+                          startName: chuyen.benDiName,
+                          endName: chuyen.benDenName,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 100),
-                  ],
+                    );
+                  },
+                  backgroundColor: Colors.blueAccent,
+                  elevation: 6,
+                  child: const Icon(Icons.map_outlined, color: Colors.white),
                 ),
               ),
-              _buildPaymentSection(),
             ],
           );
         },
@@ -157,22 +154,184 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
     );
   }
 
-  Widget _buildPaymentSection() {
+  Widget _buildHeaderCard(Chuyen chuyen) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            spreadRadius: 0,
-            blurRadius: 10,
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.blueAccent.withOpacity(0.3)),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            chuyen.chuyenName,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+            softWrap: true,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _formatDateTime(chuyen.ngayGio),
+            style: const TextStyle(color: Colors.black54, fontSize: 15),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.location_on, color: Colors.blueAccent, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${chuyen.benDiName} → ${chuyen.benDenName}',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                  maxLines: null,
+                ),
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildTripInfoCard(Chuyen chuyen) {
+    return _buildSectionCard(
+      title: 'Thông tin chuyến đi',
+      icon: Icons.event_available_outlined,
+      children: [
+        _infoRow(Icons.route_outlined, 'Tuyến đường', chuyen.tuyenDuongName),
+        _infoRow(Icons.location_on_outlined, 'Điểm đi', chuyen.diemDi),
+        _infoRow(Icons.flag_outlined, 'Điểm đến', chuyen.diemDen),
+        _infoRow(
+          Icons.chair_outlined,
+          'Tình trạng',
+          chuyen.tinhTrang,
+          valueColor: chuyen.tinhTrang.toLowerCase().contains('còn')
+              ? Colors.green
+              : Colors.red,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleInfoCard(Chuyen chuyen) {
+    return _buildSectionCard(
+      title: 'Thông tin phương tiện',
+      icon: Icons.directions_bus_filled,
+      children: [
+        _infoRow(Icons.directions_bus, 'Loại xe', chuyen.loaiXeName),
+        _infoRow(Icons.confirmation_number_outlined, 'Biển số', chuyen.bienSo),
+        _infoRow(Icons.person_outline, 'Tài xế', chuyen.taiXeName),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard({
+    required String title,
+    required IconData icon,
+    required List<Widget> children,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: Colors.blueAccent, size: 22),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.grey.shade600, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.bold,
+                    color: valueColor ?? Colors.black87,
+                  ),
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                  maxLines: null,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPaymentSection() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
         borderRadius: const BorderRadius.only(
           topLeft: Radius.circular(16),
           topRight: Radius.circular(16),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -184,7 +343,7 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
               Text(
                 _vnd(giaVe),
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   color: Colors.deepOrange,
                   fontWeight: FontWeight.bold,
                 ),
@@ -192,109 +351,20 @@ class _TripInfoScreenState extends State<TripInfoScreen> {
             ],
           ),
           ElevatedButton(
+            onPressed: _handleContinue,
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.amber,
               foregroundColor: Colors.black87,
-              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
               ),
               textStyle: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            onPressed: _handleContinue,
             child: const Text('Tiếp tục'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTripInfoCard(Chuyen chuyen) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              chuyen.chuyenName,
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineSmall
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            _infoRow(Icons.event_available_outlined, 'Khởi hành',
-                _formatDateTime(chuyen.ngayGio)),
-            const Divider(height: 20),
-            _infoRow(Icons.route_outlined, 'Tuyến đường', chuyen.tuyenDuongName),
-            const SizedBox(height: 8),
-            _infoRow(Icons.location_on_outlined, 'Điểm đi', chuyen.diemDi),
-            _infoRow(Icons.flag_outlined, 'Điểm đến', chuyen.diemDen),
-            const Divider(height: 20),
-            _infoRow(
-              Icons.chair_outlined,
-              'Tình trạng',
-              chuyen.tinhTrang,
-              valueColor: chuyen.tinhTrang.toLowerCase() == 'còn chỗ'
-                  ? Colors.green.shade700
-                  : Colors.red.shade700,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVehicleInfoCard(Chuyen chuyen) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Thông tin phương tiện',
-                style: Theme.of(context).textTheme.titleLarge),
-            const Divider(height: 20),
-            _infoRow(Icons.directions_bus_outlined, 'Loại xe', chuyen.loaiXeName),
-            _infoRow(Icons.pin_outlined, 'Biển số', chuyen.bienSo),
-            _infoRow(Icons.person_outline, 'Tài xế', chuyen.taiXeName),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow(IconData icon, String label, String value,
-      {Color? valueColor}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.grey.shade600, size: 22),
-          const SizedBox(width: 16),
-          Text('$label:',
-              style: TextStyle(fontSize: 15, color: Colors.grey.shade800)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              value,
-              textAlign: TextAlign.right,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: valueColor ?? Colors.black87,
-              ),
-              softWrap: true,
-            ),
           ),
         ],
       ),
