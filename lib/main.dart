@@ -29,7 +29,6 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  // Thêm GlobalKey để điều hướng global
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   late final AppLinks _appLinks;
@@ -45,13 +44,11 @@ class _MyAppState extends State<MyApp> {
     _initDeepLinks();
   }
 
-  // Load user từ token
   Future<void> _initApp() async {
     _user = await _getUserFromToken();
     setState(() => _isLoading = false);
   }
 
-  //Giải mã token trong SharedPreferences
   Future<TaiKhoan?> _getUserFromToken() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -94,16 +91,29 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // Xử lý deep link với navigatorKey
+  // ✅ Xử lý deep link, đồng bộ PaymentSuccessful mới
   void _handleDeepLink(Uri uri) {
     if (uri.scheme == 'datvexe' && uri.host == 'payment-success') {
       debugPrint(' Điều hướng đến PaymentSuccessful');
 
+      // ✅ Lấy veId từ query (VD: datvexe://payment-success?veId=54)
+      final veIdStr = uri.queryParameters['veId'];
+      int? veId;
+      if (veIdStr != null) {
+        veId = int.tryParse(veIdStr);
+        debugPrint('✅ Lấy được veId từ deep link: $veId');
+      }
+
       // Đảm bảo Navigator đã sẵn sàng
       Future.delayed(const Duration(milliseconds: 200), () {
         _navigatorKey.currentState?.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const PaymentSuccessful()),
-          (_) => false,
+          // ✅ Nếu có veId → truyền vào màn PaymentSuccessful
+          MaterialPageRoute(
+            builder: (_) => veId != null
+                ? PaymentSuccessful(veId: veId)
+                : const PaymentSuccessful(veId: 0), // fallback
+          ),
+              (_) => false,
         );
       });
     }
@@ -126,7 +136,6 @@ class _MyAppState extends State<MyApp> {
         appBarTheme: const AppBarTheme(
           elevation: 0,
           centerTitle: true,
-          // Dùng gradient gián tiếp qua flexibleSpace (xem dưới)
           backgroundColor: Colors.transparent,
           iconTheme: IconThemeData(
             color: Colors.white,
@@ -138,14 +147,9 @@ class _MyAppState extends State<MyApp> {
             fontWeight: FontWeight.bold,
           ),
         ),
-
-        //  Font chữ tổng thể
         fontFamily: 'Roboto',
-
-        // ⚙ Màu nền tổng thể
-        scaffoldBackgroundColor: Colors.grey[100],
+        scaffoldBackgroundColor: Colors.grey,
       ),
-
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -155,14 +159,18 @@ class _MyAppState extends State<MyApp> {
       locale: const Locale('vi', 'VN'),
       home: Builder(
         builder: (context) {
-          // Nếu deep link tồn tại → vào PaymentSuccessful luôn
+          // ✅ Deep link mở app → parse veId nếu có
           if (_initialDeepLink != null &&
               _initialDeepLink!.scheme == 'datvexe' &&
               _initialDeepLink!.host == 'payment-success') {
-            return const PaymentSuccessful();
+            final veIdStr = _initialDeepLink!.queryParameters['veId'];
+            final veId = int.tryParse(veIdStr ?? '0') ?? 0;
+            debugPrint('✅ Deep link khởi động có veId: $veId');
+
+            return PaymentSuccessful(veId: veId);
           }
 
-          // Bình thường → hiển thị app như cũ
+          // Giữ nguyên logic cũ
           if (_isLoading) return const SplashScreen();
 
           if (_user != null) {
