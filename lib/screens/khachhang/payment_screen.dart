@@ -9,7 +9,7 @@ import 'payment_successful.dart';
 
 class PaymentScreen extends StatefulWidget {
   final int veId;
-  final String email;
+  final String email; // vẫn giữ để không lỗi chỗ khác
   final int chuyenId;
   final double gia;
 
@@ -37,22 +37,20 @@ class _PaymentScreenState extends State<PaymentScreen> {
   void initState() {
     super.initState();
     _futureVeSummary = _loadSummary();
-    _futureVeSummary
-        .then((ve) {
-          if (mounted) {
-            setState(() {
-              _basePrice = ve.veGia;
-              _calculateTotal();
-            });
-          }
-        })
-        .catchError((error) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Không thể tải thông tin vé. $error')),
-            );
-          }
+    _futureVeSummary.then((ve) {
+      if (mounted) {
+        setState(() {
+          _basePrice = ve.veGia;
+          _calculateTotal();
         });
+      }
+    }).catchError((error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Không thể tải thông tin vé. $error')),
+        );
+      }
+    });
   }
 
   Future<Ve> _loadSummary() async {
@@ -65,7 +63,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
     _totalPrice = _basePrice + _insuranceFee;
   }
 
-  // Xử lý thanh toán VNPay (chưa gửi Gmail ngay)
+  /// 🔹 Xử lý thanh toán VNPay
   Future<void> _handleCheckout() async {
     setState(() => _isProcessing = true);
 
@@ -86,29 +84,38 @@ class _PaymentScreenState extends State<PaymentScreen> {
             ),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Không thể mở VNPay.')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Không thể mở VNPay.')),
+          );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Không tạo được liên kết VNPay')),
+          const SnackBar(content: Text('Không tạo được liên kết VNPay.')),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Lỗi khi xử lý thanh toán: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Lỗi khi xử lý thanh toán: $e')),
+      );
     } finally {
       setState(() => _isProcessing = false);
     }
   }
 
-  // Gọi hàm này khi backend xác nhận thanh toán thành công
+  /// ✅ Khi backend xác nhận thanh toán thành công
   void _onPaymentSuccess() {
+    // 🔹 Giữ nguyên code cũ để không conflict
+    // Navigator.pushReplacement(
+    //   context,
+    //   MaterialPageRoute(builder: (_) => PaymentSuccessful(email: widget.email)),
+    // );
+
+    // 🔹 Code mới — gửi đúng mã vé để backend gửi mail đúng người
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (_) => PaymentSuccessful(email: widget.email)),
+      MaterialPageRoute(
+        builder: (_) => PaymentSuccessful(veId: widget.veId),
+      ),
     );
   }
 
@@ -196,7 +203,7 @@ class _PaymentScreenState extends State<PaymentScreen> {
                             });
                           },
                           title: const Text('Bảo hiểm chuyến đi'),
-                          subtitle: Text('Phí bảo hiểm: 5% giá vé gốc'),
+                          subtitle: const Text('Phí bảo hiểm: 5% giá vé gốc'),
                           controlAffinity: ListTileControlAffinity.leading,
                         ),
                       ],
@@ -326,12 +333,12 @@ class _PaymentScreenState extends State<PaymentScreen> {
             child: _isProcessing
                 ? const CircularProgressIndicator(color: Colors.black)
                 : Text(
-                    'Thanh toán ${_formatCurrency(_totalPrice)}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
+              'Thanh toán ${_formatCurrency(_totalPrice)}',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
           ),
         ],
       ),
