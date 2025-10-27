@@ -43,9 +43,9 @@ class Api {
     if (savedToken != null && savedToken.isNotEmpty) {
       token = savedToken;
       _dio.options.headers['Authorization'] = 'Bearer $savedToken';
-      print('🔵 Token đã load lại từ SharedPreferences: $savedToken');
+      print(' Token đã load lại từ SharedPreferences: $savedToken');
     } else {
-      print('⚪ Không tìm thấy token trong SharedPreferences khi load');
+      print(' Không tìm thấy token trong SharedPreferences khi load');
     }
   }
 
@@ -89,7 +89,7 @@ class Api {
   static void _throwIfClientError(Response r) {
     if (r.statusCode != null && r.statusCode! >= 400) {
       final uri = r.requestOptions.uri;
-      print('⚠️ HTTP ${r.statusCode} @ $uri');
+      print('️ HTTP ${r.statusCode} @ $uri');
       print('Response: ${r.data}');
       throw DioException.badResponse(
         statusCode: r.statusCode!,

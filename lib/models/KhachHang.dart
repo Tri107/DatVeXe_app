@@ -18,9 +18,9 @@ class KhachHang {
     // SỬA: Cập nhật lại các khóa (key) để khớp 100% với JSON từ API
     return KhachHang(
       khachHangId: json['KhachHang_id'],
-      khachHangName: json['KhachHang_name'] ?? '', // Khóa này là KhachHang_name
-      email: json['email'] ?? '',                  // Khóa này là email
-      sdt: json['SDT'] ?? '',                      // Khóa này là SDT
+      khachHangName: json['KhachHang_name'] ?? '',
+      email: json['email'] ?? '',
+      sdt: json['SDT'] ?? '',
     );
   }
 }
