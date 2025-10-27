@@ -5,7 +5,7 @@ import '../config/api.dart';
 
 class TinhThanhPhoService {
   static const String tinhThanhPho = '/TinhThanhPho';
-  /// 🔹 Lấy danh sách tất cả Tỉnh/Thành phố
+  ///  Lấy danh sách tất cả Tỉnh/Thành phố
   Future<List<TinhThanhPho>> getAll() async {
     try {
       // Ghép URL gốc và endpoint
@@ -24,7 +24,7 @@ class TinhThanhPhoService {
         },
       );
 
-      // ✅ Nếu thành công
+      //  Nếu thành công
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body);
 
@@ -53,7 +53,7 @@ class TinhThanhPhoService {
             'Không thể tải danh sách tỉnh/thành (Mã lỗi: ${response.statusCode})');
       }
     } catch (e) {
-      throw Exception('❌ Lỗi khi tải tỉnh/thành phố: $e');
+      throw Exception(' Lỗi khi tải tỉnh/thành phố: $e');
     }
   }
 }
