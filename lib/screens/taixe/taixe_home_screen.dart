@@ -55,7 +55,7 @@ class _TaiXeHomeScreenState extends State<TaiXeHomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FC),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         backgroundColor: Colors.blueAccent,
         title: const Text('Trang chủ'),

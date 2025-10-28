@@ -38,16 +38,16 @@ class _TaiXeTripListScreenState extends State<TaiXeTripListScreen> {
   //Gọi API lấy danh sách chuyến xe của tài xế
   Future<void> _loadTrips() async {
     try {
-      print("📦 Đang tải danh sách chuyến cho tài xế ID: ${widget.taiXeId}");
+      print(" Đang tải danh sách chuyến cho tài xế ID: ${widget.taiXeId}");
       final data = await TaiXeService.getChuyenList(widget.taiXeId);
-      print("✅ Nhận được ${data.length} chuyến.");
+      print(" Nhận được ${data.length} chuyến.");
 
       setState(() {
         trips = data;
         isLoading = false;
       });
     } catch (e) {
-      print("❌ Lỗi tải chuyến: $e");
+      print(" Lỗi tải chuyến: $e");
       setState(() => isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Lỗi tải danh sách chuyến: $e')),
@@ -58,7 +58,7 @@ class _TaiXeTripListScreenState extends State<TaiXeTripListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Danh sách chuyến xe"),
         backgroundColor: Colors.blueAccent,

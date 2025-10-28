@@ -89,6 +89,7 @@ class _ScanQRScreenState extends State<ScanQRScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text('Quét vé hành khách'),
         backgroundColor: const Color(0xFF1565C0),

@@ -75,7 +75,7 @@ class _TaiXeTripDetailScreenState extends State<TaiXeTripDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
         title: const Text("Chi tiết chuyến xe"),
         backgroundColor: Colors.blueAccent,

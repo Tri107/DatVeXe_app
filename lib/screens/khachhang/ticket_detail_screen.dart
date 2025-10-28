@@ -78,18 +78,21 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const Scaffold(
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (ve == null) {
-      return const Scaffold(
+      return Scaffold(
+        backgroundColor: Colors.grey[100],
         body: Center(child: Text('Không tìm thấy vé')),
       );
     }
 
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(
@@ -178,7 +181,6 @@ class _TicketDetailScreenState extends State<TicketDetailScreen> {
           ),
         ),
       ),
-      backgroundColor: Colors.grey[100],
     );
   }
 }
