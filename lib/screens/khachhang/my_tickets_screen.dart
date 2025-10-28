@@ -46,6 +46,7 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(

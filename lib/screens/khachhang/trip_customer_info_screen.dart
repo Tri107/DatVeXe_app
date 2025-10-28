@@ -118,6 +118,7 @@ class _TripCustomerInfoScreenState extends State<TripCustomerInfoScreen> {
     final bool hasExistingCustomer = _existingCustomerId != null;
 
     return Scaffold(
+      backgroundColor: Colors.grey[100],
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(60),
         child: Container(

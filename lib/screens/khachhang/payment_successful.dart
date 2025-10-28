@@ -33,7 +33,7 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
     _confettiLeft = ConfettiController(duration: const Duration(seconds: 5));
     _confettiRight = ConfettiController(duration: const Duration(seconds: 5));
 
-    // ✅ Gửi email tự động khi mở màn hình
+    //  Gửi email tự động khi mở màn hình
     _sendEmailAfterPayment(widget.veId);
 
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -51,14 +51,14 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
     super.dispose();
   }
 
-  /// 🔹 Gửi email xác nhận vé
+  // Gửi email xác nhận vé
   Future<void> _sendEmailAfterPayment(int veId) async {
     try {
       setState(() => _isSending = true);
-      print("📧 Gửi vé theo veId: $veId");
-      print("📦 Dữ liệu gửi lên API: {veId: $veId}");
+      print(" Gửi vé theo veId: $veId");
+      print(" Dữ liệu gửi lên API: {veId: $veId}");
 
-      // ✅ Gửi JSON đúng chuẩn
+      //  Gửi JSON đúng chuẩn
       final response = await Api.client.post(
         '/email/send-ticket-email',
         data: {'veId': veId},
@@ -68,14 +68,14 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
         ),
       );
 
-      print("📨 Server trả về: ${response.data}");
+      print(" Server trả về: ${response.data}");
 
       if (response.statusCode == 200) {
         setState(() => _displayEmail = response.data['email']);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("📩 Vé đã được gửi tới Gmail của bạn!"),
+              content: Text(" Vé đã được gửi tới Gmail của bạn!"),
               backgroundColor: Colors.green,
             ),
           );
@@ -84,7 +84,7 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
         throw Exception("Lỗi gửi email (status ${response.statusCode})");
       }
     } catch (e) {
-      print("❌ Lỗi gửi email: $e");
+      print(" Lỗi gửi email: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -98,7 +98,7 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
     }
   }
 
-  /// 🔹 Quay lại trang chủ
+  // Quay lại trang chủ
   Future<void> _goHome(BuildContext context) async {
     final user = await AuthService.getCurrentUser();
     if (!context.mounted) return;
@@ -189,7 +189,7 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
                 CircularProgressIndicator(color: Colors.green),
                 SizedBox(height: 16),
                 Text(
-                  "Đang gửi vé đến email của bạn...",
+                  "Đang xử lý thanh toán...",
                   style: TextStyle(fontSize: 16),
                 ),
               ],
@@ -223,8 +223,8 @@ class _PaymentSuccessfulState extends State<PaymentSuccessful> {
                 const SizedBox(height: 20),
                 Text(
                   _displayEmail != null
-                      ? "📧 Vé đã được gửi về: ${_displayEmail!}"
-                      : "📧 Vé đang được xử lý...",
+                      ? " Vé đã được gửi về: ${_displayEmail!}"
+                      : " Vé đang được xử lý...",
                   style: const TextStyle(
                     fontSize: 16,
                     color: Colors.black87,

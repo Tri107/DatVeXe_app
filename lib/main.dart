@@ -77,7 +77,7 @@ class _MyAppState extends State<MyApp> {
     // Khi app đang mở (foreground)
     _linkSub = _appLinks.uriLinkStream.listen((uri) {
       if (uri == null) return;
-      debugPrint('🔗 Nhận deep link realtime: $uri');
+      debugPrint(' Nhận deep link realtime: $uri');
       _handleDeepLink(uri);
     });
 
@@ -91,23 +91,23 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  // ✅ Xử lý deep link, đồng bộ PaymentSuccessful mới
+  // Xử lý deep link, đồng bộ PaymentSuccessful mới
   void _handleDeepLink(Uri uri) {
     if (uri.scheme == 'datvexe' && uri.host == 'payment-success') {
       debugPrint(' Điều hướng đến PaymentSuccessful');
 
-      // ✅ Lấy veId từ query (VD: datvexe://payment-success?veId=54)
+      //  Lấy veId từ query (VD: datvexe://payment-success?veId=54)
       final veIdStr = uri.queryParameters['veId'];
       int? veId;
       if (veIdStr != null) {
         veId = int.tryParse(veIdStr);
-        debugPrint('✅ Lấy được veId từ deep link: $veId');
+        debugPrint(' Lấy được veId từ deep link: $veId');
       }
 
       // Đảm bảo Navigator đã sẵn sàng
       Future.delayed(const Duration(milliseconds: 200), () {
         _navigatorKey.currentState?.pushAndRemoveUntil(
-          // ✅ Nếu có veId → truyền vào màn PaymentSuccessful
+          //  Nếu có veId → truyền vào màn PaymentSuccessful
           MaterialPageRoute(
             builder: (_) => veId != null
                 ? PaymentSuccessful(veId: veId)
@@ -159,13 +159,13 @@ class _MyAppState extends State<MyApp> {
       locale: const Locale('vi', 'VN'),
       home: Builder(
         builder: (context) {
-          // ✅ Deep link mở app → parse veId nếu có
+          //  Deep link mở app → parse veId nếu có
           if (_initialDeepLink != null &&
               _initialDeepLink!.scheme == 'datvexe' &&
               _initialDeepLink!.host == 'payment-success') {
             final veIdStr = _initialDeepLink!.queryParameters['veId'];
             final veId = int.tryParse(veIdStr ?? '0') ?? 0;
-            debugPrint('✅ Deep link khởi động có veId: $veId');
+            debugPrint(' Deep link khởi động có veId: $veId');
 
             return PaymentSuccessful(veId: veId);
           }
