@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:datvexe_app/screens/khachhang/ticket_detail_screen.dart';
 import '../../models/Ve.dart';
@@ -43,77 +44,90 @@ class _MyTicketsScreenState extends State<MyTicketsScreen> {
     }
   }
 
+  String formatDate(dynamic value) {
+    try {
+      if (value == null) return "Không rõ";
+      if (value is DateTime) return DateFormat('dd/MM/yyyy HH:mm').format(value);
+      if (value is String) {
+        return DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(value));
+      }
+      return DateFormat('dd/MM/yyyy HH:mm')
+          .format(DateTime.tryParse(value.toString()) ?? DateTime.now());
+    } catch (e) {
+      return "Không rõ";
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(60),
-        child: Container(
-          decoration: const BoxDecoration(gradient: AppGradients.primary),
-          child: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            centerTitle: true,
-            title: const Text(
-              'Vé của tôi',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
+        backgroundColor: Colors.grey[100],
+        appBar: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Container(
+            decoration: const BoxDecoration(gradient: AppGradients.primary),
+            child: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              centerTitle: true,
+              title: const Text(
+                'Vé của tôi',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
         ),
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : tickets.isEmpty
-          ? const Center(child: Text("Bạn chưa có vé nào"))
-          : ListView.builder(
-              itemCount: tickets.length,
-              itemBuilder: (context, index) {
-                final v = tickets[index];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => TicketDetailScreen(veId: v.veId),
-                      ),
-                    );
-                  },
-                  child: Card(
-                    margin: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8,
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : tickets.isEmpty
+            ? const Center(child: Text("Bạn chưa có vé nào"))
+            : ListView.builder(
+            itemCount: tickets.length,
+            itemBuilder: (context, index) {
+              final v = tickets[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TicketDetailScreen(veId: v.veId),
                     ),
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(12),
-                      title: Text(
-                        v.chuyenName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Bến: ${v.tuyenDuongName}"),
-                          Text("Ngày đi: ${v.ngayGio}"),
-                          Text(
-                            "Giá vé: ${v.veGia.toStringAsFixed(0)}đ",
-                            style: const TextStyle(color: Colors.redAccent),
-                          ),
-                        ],
-                      ),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                    ),
+                  );
+                },
+                child: Card(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                );
-              },
-            ),
+                  elevation: 3,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.all(12),
+                    title: Text(
+                      v.chuyenName,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Bến: ${v.tuyenDuongName}"),
+                        Text(
+                          "Giá vé: ${v.veGia.toStringAsFixed(0)}đ",
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                  ),
+                ),
+              );
+            },
+        ),
     );
   }
 }
